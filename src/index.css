@@ -64,6 +64,8 @@ h1, h2, .brand-name { font-family: "Fredoka", sans-serif; }
 .auth-card h2 { font-size: 2.2rem; margin: 10px 0 8px; letter-spacing: -.03em; }
 .auth-card form { margin-top: 30px; display: grid; gap: 20px; }
 label { display: grid; gap: 8px; font-weight: 700; font-size: .9rem; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-error { margin: -6px 0 0; padding: 10px 14px; border-radius: 11px; color: oklch(45% 0.16 25); background: oklch(96% 0.03 25); font-size: .85rem; font-weight: 700; }
 .input-wrap { min-height: 54px; display: flex; align-items: center; gap: 12px; padding: 0 16px; border: 1.5px solid var(--line); border-radius: 13px; color: var(--muted); background: oklch(99% 0.006 90); transition: border-color .2s, box-shadow .2s; }
 .input-wrap:focus-within { border-color: var(--green); box-shadow: 0 0 0 4px color-mix(in oklch, var(--green) 12%, transparent); }
 .input-wrap input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--ink); font-weight: 500; }
@@ -191,6 +193,7 @@ aside { display: grid; align-content: start; gap: 18px; }
 }
 
 @media (max-width: 650px) {
+  .field-row { grid-template-columns: 1fr; }
   .quiz-header .brand-name, .home-nav .brand-name, .streak-pill span, .home-nav nav { display: none; }
   .quiz-card { padding: 48px 22px 28px; }
   .quiz-mascot { width: 84px; right: 20px; top: -48px; }

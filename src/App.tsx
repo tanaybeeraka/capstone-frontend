@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useState } from "react";
+import { FormEvent, InputHTMLAttributes, ReactNode, useState } from "react";
 
 type Screen = "signin" | "quiz" | "home";
 
@@ -93,14 +93,98 @@ function Mascot({ small = false }: { small?: boolean }) {
   );
 }
 
-function SignIn({ onContinue }: { onContinue: (name: string) => void }) {
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
+type Account = {
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  password: string;
+  profile?: Profile;
+};
+
+const accountsKey = "bone-buddies-accounts";
+
+function loadAccounts(): Record<string, Account> {
+  const saved = window.localStorage.getItem(accountsKey);
+  return saved ? JSON.parse(saved) : {};
+}
+
+function saveAccount(account: Account) {
+  const accounts = loadAccounts();
+  accounts[account.username.toLowerCase()] = account;
+  window.localStorage.setItem(accountsKey, JSON.stringify(accounts));
+}
+
+function Field({
+  label,
+  icon,
+  ...inputProps
+}: {
+  label: string;
+  icon: ReactNode;
+} & InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <label>
+      <span>{label}</span>
+      <span className="input-wrap">
+        <Icon>{icon}</Icon>
+        <input required {...inputProps} />
+      </span>
+    </label>
+  );
+}
+
+const personIcon = <><path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="7" r="4" /></>;
+const lockIcon = <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>;
+
+function SignIn({ onContinue }: { onContinue: (account: Account, isNew: boolean) => void }) {
   const [mode, setMode] = useState<"signin" | "create">("signin");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  function switchMode() {
+    setMode(mode === "signin" ? "create" : "signin");
+    setError("");
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    onContinue(name.trim() || "Bone Explorer");
+    const accounts = loadAccounts();
+    const usernameKey = username.trim().toLowerCase();
+
+    if (mode === "signin") {
+      const account = accounts[usernameKey];
+      if (!account || account.password !== password) {
+        setError("That username and password don’t match. Try again!");
+        return;
+      }
+      onContinue(account, false);
+      return;
+    }
+
+    if (accounts[usernameKey]) {
+      setError("That username is already taken. Try a different one!");
+      return;
+    }
+    const emailKey = email.trim().toLowerCase();
+    if (Object.values(accounts).some((account) => account.email.toLowerCase() === emailKey)) {
+      setError("An account with that email already exists. Try signing in!");
+      return;
+    }
+
+    const account: Account = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      username: username.trim(),
+      email: email.trim(),
+      password,
+    };
+    saveAccount(account);
+    onContinue(account, true);
   }
 
   return (
@@ -136,34 +220,58 @@ function SignIn({ onContinue }: { onContinue: (name: string) => void }) {
           </p>
 
           <form onSubmit={submit}>
-            <label>
-              <span>Your first name</span>
-              <span className="input-wrap">
-                <Icon><path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="7" r="4" /></Icon>
-                <input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="What should Benny call you?"
-                  required
-                  autoComplete="given-name"
+            {mode === "create" && (
+              <>
+                <div className="field-row">
+                  <Field
+                    label="First name"
+                    icon={personIcon}
+                    value={firstName}
+                    onChange={(event) => setFirstName(event.target.value)}
+                    placeholder="First name"
+                    autoComplete="given-name"
+                  />
+                  <Field
+                    label="Last name"
+                    icon={personIcon}
+                    value={lastName}
+                    onChange={(event) => setLastName(event.target.value)}
+                    placeholder="Last name"
+                    autoComplete="family-name"
+                  />
+                </div>
+                <Field
+                  label="Email"
+                  icon={<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>}
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="grownup@example.com"
+                  autoComplete="email"
                 />
-              </span>
-            </label>
-            <label>
-              <span>Secret password</span>
-              <span className="input-wrap">
-                <Icon><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></Icon>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  minLength={4}
-                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                />
-              </span>
-            </label>
+              </>
+            )}
+            <Field
+              label="Username"
+              icon={<><circle cx="12" cy="12" r="4" /><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8" /></>}
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder={mode === "signin" ? "Enter your username" : "Pick a fun username"}
+              autoComplete="username"
+              pattern="[A-Za-z0-9_]{3,20}"
+              title="3–20 letters, numbers, or underscores"
+            />
+            <Field
+              label="Secret password"
+              icon={lockIcon}
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder={mode === "signin" ? "Enter your password" : "Create a password"}
+              minLength={4}
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+            />
+            {error && <p className="form-error" role="alert">{error}</p>}
             <button className="primary-button" type="submit">
               {mode === "signin" ? "Let’s go!" : "Create my account"}
               <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
@@ -171,7 +279,7 @@ function SignIn({ onContinue }: { onContinue: (name: string) => void }) {
           </form>
 
           <div className="divider"><span>OR</span></div>
-          <button className="text-button" type="button" onClick={() => setMode(mode === "signin" ? "create" : "signin")}>
+          <button className="text-button" type="button" onClick={switchMode}>
             {mode === "signin" ? "New here? Create an account" : "Already have an account? Sign in"}
           </button>
           <p className="grownup-note">
@@ -649,6 +757,7 @@ function Home({
 export default function App() {
   const [screen, setScreen] = useState<Screen>("signin");
   const [profile, setProfile] = useState<Profile>(initialProfile);
+  const [account, setAccount] = useState<Account | null>(null);
   const [streakData, setStreakData] = useState<{ count: number; lastActiveDate: string }>(() => {
     const savedStreak = window.localStorage.getItem("bone-buddies-streak");
     return savedStreak ? JSON.parse(savedStreak) : { count: 0, lastActiveDate: "" };
@@ -681,17 +790,27 @@ export default function App() {
   if (screen === "signin") {
     return (
       <SignIn
-        onContinue={(name) => {
-          setProfile({ ...profile, name });
+        onContinue={(signedIn, isNew) => {
+          setAccount(signedIn);
+          setProfile(signedIn.profile ?? { ...initialProfile, name: signedIn.firstName });
           startFirstDay();
-          setScreen("quiz");
+          setScreen(isNew || !signedIn.profile ? "quiz" : "home");
         }}
       />
     );
   }
 
   if (screen === "quiz") {
-    return <Questionnaire profile={profile} setProfile={setProfile} onDone={() => setScreen("home")} />;
+    return (
+      <Questionnaire
+        profile={profile}
+        setProfile={setProfile}
+        onDone={() => {
+          if (account) saveAccount({ ...account, profile });
+          setScreen("home");
+        }}
+      />
+    );
   }
 
   return (
@@ -699,7 +818,10 @@ export default function App() {
       profile={profile}
       streak={streakData.count}
       onLessonComplete={completeLesson}
-      onSignOut={() => setScreen("signin")}
+      onSignOut={() => {
+        setAccount(null);
+        setScreen("signin");
+      }}
     />
   );
 }
