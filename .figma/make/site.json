@@ -1,0 +1,10 @@
+{
+  "description": "Engaging interactive game teaching elementary students about bone fractures and healing through simulations, quizzes, and fun mascot-led lessons.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
