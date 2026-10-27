@@ -218,3 +218,121 @@ aside { display: grid; align-content: start; gap: 18px; }
   @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-8px) rotate(1deg); } }
   @keyframes reveal-field { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 }
+
+.bone-lesson-page { min-height: 100vh; padding-bottom: 48px; background: #eaf6ff; }
+.lesson-topbar { min-height: 62px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 clamp(16px, 4vw, 42px); background: white; border-bottom: 1px solid #d5e8f4; }
+.lesson-topbar .brand { justify-self: center; }
+.lesson-topbar .logo-mark { width: 34px; height: 34px; border-radius: 11px; }
+.lesson-topbar .logo-mark svg { width: 24px; height: 24px; }
+.lesson-topbar .brand-name { font-size: 1rem; }
+.lesson-back { justify-self: start; padding: 8px 0; border: 0; background: transparent; color: #42637a; font-size: .78rem; font-weight: 700; cursor: pointer; }
+.lesson-top-progress { justify-self: end; color: #627c8d; font-size: .66rem; font-weight: 800; letter-spacing: .1em; }
+.bone-lesson-wrap { width: min(calc(100% - 32px), 1060px); margin: 28px auto; }
+.bone-lesson-heading { max-width: 720px; margin: 0 auto 20px; }
+.bone-lesson-heading h1 { margin: 7px 0 3px; font-size: clamp(1.7rem, 3vw, 2.35rem); letter-spacing: -.035em; }
+.bone-lesson-heading > p { margin: 0 0 16px; color: #536e82; font-size: .88rem; }
+.bone-progress-label { display: flex; justify-content: space-between; color: #587184; font-size: .7rem; font-weight: 700; }
+.bone-progress-label strong { color: #22648a; }
+.bone-progress-track { height: 7px; margin-top: 7px; overflow: hidden; border-radius: 20px; background: #d7eaf6; }
+.bone-progress-track span { display: block; height: 100%; border-radius: inherit; background: #32b697; transition: width .25s ease; }
+.bone-slide-card, .bone-practice-card { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); overflow: hidden; border: 1px solid #d5e7f2; border-radius: 20px; background: white; box-shadow: 0 12px 32px #244a6310; }
+.bone-illustration-panel { min-height: 430px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 20px 24px 12px; background: #f3faff; }
+.illustration-label, .illustration-caption { color: #607d91; font-size: .63rem; font-weight: 800; letter-spacing: .08em; }
+.illustration-caption { font-size: .67rem; font-weight: 600; letter-spacing: 0; }
+.bone-focus-ring { position: relative; width: min(100%, 300px); display: grid; place-items: center; }
+.bone-focus-ring > span { position: absolute; z-index: 1; top: 21%; right: 3%; padding: 6px 10px; border: 1px solid #b7d9ee; border-radius: 20px; background: white; color: #266e95; font-size: .67rem; font-weight: 800; }
+.skeleton-map { display: block; width: min(100%, 350px); height: auto; overflow: visible; }
+.bone-focus-ring .skeleton-map { max-height: 340px; }
+.skeleton-bone, .skeleton-spine, .skeleton-arm, .skeleton-forearm, .skeleton-hand, .skeleton-thigh, .skeleton-knee, .skeleton-foot, .skeleton-sternum, .skeleton-pelvis, .skeleton-face { fill: none; stroke: #77b9cc; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.skeleton-bone { stroke-width: 6; }
+.skeleton-spine { stroke: #429bb7; stroke-width: 5; stroke-dasharray: 2 4; }
+.skeleton-arm, .skeleton-forearm, .skeleton-hand { stroke-width: 5; }
+.skeleton-sternum { stroke: #ee8766; stroke-width: 6; }
+.skeleton-pelvis { fill: #d7eef4; stroke: #77b9cc; stroke-width: 5; stroke-linejoin: round; }
+.skeleton-thigh { stroke: #77b9cc; stroke-width: 9; }
+.skeleton-knee { fill: #f7dca8; stroke: #77b9cc; stroke-width: 4; }
+.skeleton-tibia { stroke: #e79953; stroke-width: 7; }
+.skeleton-fibula { stroke: #4a93ca; stroke-width: 4; }
+.skeleton-foot { stroke-width: 5; }
+.skeleton-face { stroke: #155878; stroke-width: 3; }
+.skeleton-joint { fill: #155878; }
+.map-spot { cursor: pointer; outline: none; }
+.spot-hit-area { fill: transparent; stroke: transparent; stroke-width: 2; }
+.spot-dot { fill: #fff; stroke: #3685b5; stroke-width: 2; transition: r .15s, fill .15s; }
+.spot-focus .spot-dot { stroke: #f1845f; stroke-width: 3; }
+.spot-selected .spot-dot, .map-spot:focus .spot-dot { fill: #ffe083; stroke: #155878; stroke-width: 3; }
+.spot-placed .spot-dot { fill: #45c69d; stroke: #197c67; }
+.spot-check { fill: white; font: 800 10px "DM Sans", sans-serif; text-anchor: middle; pointer-events: none; }
+.bone-slide-copy { display: flex; flex-direction: column; align-items: flex-start; padding: clamp(28px, 5vw, 55px); }
+.slide-number { color: #668195; font-size: .67rem; font-weight: 800; letter-spacing: .12em; }
+.bone-slide-copy h2 { margin: 12px 0 7px; font-size: clamp(2.2rem, 4vw, 3.1rem); line-height: 1; letter-spacing: -.04em; }
+.bone-region-tag { padding: 5px 10px; border-radius: 20px; background: #e9f6fc; color: #286f93; font-size: .7rem; font-weight: 800; }
+.bone-slide-copy > p { margin: 23px 0 0; color: #456277; font-size: 1rem; line-height: 1.7; }
+.bone-slide-copy > p.bone-side-note { margin-top: 15px; padding: 13px 15px; border-left: 4px solid #f0bf50; border-radius: 0 10px 10px 0; background: #fff7dd; color: #5a4b28; font-size: .83rem; line-height: 1.55; }
+.bone-slide-actions, .practice-actions { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 30px; }
+.bone-slide-actions .back-button, .practice-actions .back-button { padding-left: 0; font-size: .78rem; }
+.bone-slide-actions .primary-button, .practice-actions .primary-button { min-height: 46px; padding: 0 16px; font-size: .8rem; }
+.bone-practice-card { grid-template-columns: minmax(260px, .82fr) minmax(0, 1.18fr); }
+.bone-tray-panel { display: flex; flex-direction: column; padding: 22px; }
+.practice-title { display: flex; justify-content: space-between; align-items: center; }
+.practice-title h2 { margin: 5px 0 0; font: 600 1.3rem "Fredoka", sans-serif; }
+.placed-count { padding: 7px 10px; border-radius: 10px; background: #eff8ff; color: #286f93; font-size: .67rem; font-weight: 800; }
+.practice-hint { margin: 9px 0 14px; color: #60798b; font-size: .74rem; line-height: 1.5; }
+.bone-name-tray { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 7px; }
+.bone-chip { min-height: 32px; padding: 5px 10px; border: 1px solid #b6d6e8; border-radius: 9px; background: #f2faff; color: #18577d; font-size: .68rem; font-weight: 800; cursor: grab; transition: transform .15s, background .15s, border-color .15s; }
+.bone-chip:hover:not(:disabled) { transform: translateY(-1px); border-color: #3184b4; background: #e5f5ff; }
+.bone-chip:active { cursor: grabbing; }
+.bone-chip.chip-selected { border-color: #14658f; background: #d9f1ff; box-shadow: 0 0 0 2px #4ba9cf33; }
+.bone-chip.chip-placed { cursor: default; opacity: .48; text-decoration: line-through; }
+.benny-feedback { display: flex; align-items: flex-start; gap: 10px; margin-top: auto; padding: 12px; border: 1px solid #b4d7ed; border-radius: 12px; background: #f4fbff; }
+.benny-face { flex: 0 0 auto; color: #2f7196; font-size: 1.6rem; line-height: 1; }
+.benny-face.benny-happy { color: #129a73; }
+.benny-feedback strong { color: #1d5e80; font: 600 .78rem "Fredoka", sans-serif; }
+.benny-feedback p { margin: 3px 0 0; color: #47677c; font-size: .7rem; line-height: 1.45; }
+.practice-actions { padding-top: 14px; }
+.bone-map-panel { position: relative; min-height: 490px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 88px 24px 16px; background: #f3f9ff; }
+.bone-map-panel .skeleton-map { width: min(100%, 370px); max-height: 410px; }
+.map-prompt { position: absolute; top: 18px; left: 20px; right: 20px; z-index: 1; display: grid; gap: 3px; padding: 10px 12px; border: 1px solid #a9d2ec; border-radius: 10px; background: white; color: #164b70; }
+.map-prompt strong { font: 600 .83rem "Fredoka", sans-serif; }
+.map-prompt span { color: #4c6a7d; font-size: .66rem; }
+.map-caption { width: 100%; display: flex; justify-content: space-between; color: #60798b; font-size: .63rem; }
+.map-caption strong { color: #286f93; }
+.lesson-finish-card { width: min(calc(100% - 32px), 560px); margin: 10vh auto; padding: 48px; border: 1px solid #d5e7f2; border-radius: 22px; background: white; text-align: center; box-shadow: 0 12px 32px #244a6310; }
+.finish-badge { display: grid; width: 70px; height: 70px; place-items: center; margin: 0 auto 22px; border-radius: 50%; background: #fff2bd; font-size: 2rem; }
+.lesson-finish-card h1 { margin: 10px 0; font-size: 2.25rem; }
+.lesson-finish-card p { margin: 0 auto 25px; max-width: 390px; color: #536e82; line-height: 1.6; }
+
+@media (max-width: 740px) {
+  .bone-lesson-wrap { margin-top: 20px; }
+  .bone-slide-card, .bone-practice-card { grid-template-columns: 1fr; }
+  .bone-illustration-panel { min-height: 310px; }
+  .bone-focus-ring { width: min(100%, 240px); }
+  .bone-focus-ring .skeleton-map { max-height: 275px; }
+  .bone-slide-copy { min-height: 340px; padding: 26px; }
+  .bone-slide-copy > p { margin-top: 16px; }
+  .bone-practice-card { overflow: visible; }
+  .bone-tray-panel { min-height: 390px; }
+  .bone-map-panel { min-height: 440px; border-radius: 0 0 20px 20px; }
+  .bone-map-panel .skeleton-map { width: min(100%, 320px); max-height: 355px; }
+}
+
+@media (max-width: 480px) {
+  .lesson-topbar { grid-template-columns: 1fr auto; min-height: 58px; }
+  .lesson-topbar .brand { display: none; }
+  .lesson-top-progress { font-size: .58rem; }
+  .bone-lesson-wrap { width: min(calc(100% - 22px), 1060px); }
+  .bone-lesson-heading { padding: 0 3px; }
+  .bone-lesson-heading > p { font-size: .78rem; }
+  .bone-illustration-panel { min-height: 280px; padding: 15px; }
+  .bone-focus-ring { width: 205px; }
+  .bone-focus-ring .skeleton-map { max-height: 235px; }
+  .bone-slide-copy { min-height: 370px; padding: 22px; }
+  .bone-slide-actions { padding-top: 22px; }
+  .bone-slide-actions .back-button, .practice-actions .back-button { font-size: .67rem; }
+  .bone-tray-panel { padding: 17px; }
+  .bone-name-tray { gap: 6px; }
+  .bone-chip { min-height: 30px; padding: 4px 8px; font-size: .64rem; }
+  .bone-map-panel { min-height: 400px; padding: 80px 15px 14px; }
+  .bone-map-panel .skeleton-map { max-height: 325px; }
+  .lesson-finish-card { padding: 34px 22px; }
+}
