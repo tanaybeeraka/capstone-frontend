@@ -151,8 +151,17 @@ function SignIn({ onContinue }: { onContinue: (account: Account, isNew: boolean)
     setError("");
   }
 
-  function submit(event: FormEvent) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
+    const invalidField = form.querySelector<HTMLInputElement>(":invalid");
+    if (invalidField) {
+      const label = invalidField.labels?.[0]?.textContent?.trim() || "This field";
+      setError(`${label}: ${invalidField.validationMessage}`);
+      invalidField.focus();
+      return;
+    }
+
     const accounts = loadAccounts();
     const usernameKey = username.trim().toLowerCase();
 
@@ -219,7 +228,7 @@ function SignIn({ onContinue }: { onContinue: (account: Account, isNew: boolean)
               : "Ask a grown-up to help you create your account."}
           </p>
 
-          <form onSubmit={submit}>
+          <form onSubmit={submit} noValidate>
             {mode === "create" && (
               <>
                 <div className="field-row">
