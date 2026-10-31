@@ -113,6 +113,8 @@ label { display: grid; gap: 8px; font-weight: 700; font-size: .9rem; }
 .home-page { min-height: 100vh; background: var(--cream); }
 .home-nav { position: sticky; top: 0; z-index: 10; }
 .nav-actions { display: flex; align-items: center; gap: 15px; }
+.xp-pill { display: flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 12px; border-radius: 20px; background: #fff3c9; color: #966514; font-size: .82rem; font-weight: 800; }
+.xp-pill svg { width: 18px; height: 18px; fill: #f2bf45; stroke: #966514; }
 .streak-pill { display: flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; background: color-mix(in oklch, var(--coral) 12%, white); border-radius: 20px; color: var(--coral); }
 .streak-pill strong { color: var(--ink); }
 .streak-pill span { color: var(--muted); font-size: .75rem; }
@@ -300,6 +302,18 @@ aside { display: grid; align-content: start; gap: 18px; }
 .function-feedback.function-correct { color: #197c67; }
 .function-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 40px; }
 .function-actions .primary-button { min-height: 46px; }
+.lesson-review-card { min-height: 540px; }
+.review-score-row { display: flex; justify-content: space-between; gap: 12px; margin-top: 20px; color: #587184; font-size: .76rem; font-weight: 700; }
+.review-score-row strong { color: #966514; }
+.review-progress-track { margin-top: 8px; }
+.review-xp-callout { margin: 18px 0; padding: 10px 13px; border-radius: 10px; background: #fff7dd; color: #725416; font-size: .82rem; font-weight: 700; }
+.review-actions { justify-content: flex-end; min-height: 46px; margin-top: 24px; }
+.lesson-results-stats { display: flex; justify-content: center; gap: 14px; margin: 26px 0 14px; }
+.lesson-results-stats > div { min-width: 150px; display: grid; gap: 5px; padding: 16px; border: 1px solid #d5e7f2; border-radius: 14px; background: #f5fbff; }
+.lesson-results-stats strong { color: #155878; font: 700 1.35rem "Fredoka", sans-serif; }
+.lesson-results-stats > div:last-child strong { color: #966514; }
+.lesson-results-stats span { color: #60798b; font-size: .72rem; font-weight: 700; }
+.lesson-xp-note { margin: 0 0 22px; color: #60798b; font-size: .82rem; }
 .bone-slide-card .bone-slide-actions { padding-top: 30px; }
 .bone-slide-card .bone-slide-actions .back-button:disabled { visibility: visible; opacity: .55; cursor: default; }
 .bone-slide-actions > span { color: #60798b; font-size: .76rem; font-weight: 700; }
@@ -373,6 +387,9 @@ aside { display: grid; align-content: start; gap: 18px; }
   .bone-function-card { min-height: 0; padding: 28px 20px; }
   .function-actions { align-items: stretch; flex-direction: column-reverse; margin-top: 24px; }
   .function-actions .primary-button { width: 100%; }
+  .review-score-row { align-items: flex-start; flex-direction: column; }
+  .lesson-results-stats { gap: 8px; }
+  .lesson-results-stats > div { min-width: 0; flex: 1; padding: 12px 8px; }
   .bone-zoom-card { right: 12px; bottom: 12px; width: 96px; height: 96px; }
   .bone-zoom-card .zoom-focus-marker { width: 15px; height: 15px; }
   .bone-slide-actions { padding-top: 22px; }

@@ -100,6 +100,8 @@ type Account = {
   email: string;
   password: string;
   profile?: Profile;
+  xp?: number;
+  lesson1QuizCompleted?: boolean;
 };
 
 const accountsKey = "bone-buddies-accounts";
@@ -635,6 +637,13 @@ const bones: Bone[] = [
   { id: "pelvis", name: "Pelvis", region: "Hips", description: "Your pelvis is a strong group of bones at your hips. It helps support your body and protects organs inside.", landmark: "the hips", x: 160, y: 204, imageX: 203, imageY: 367 },
 ];
 
+function getFunctionChoices(bone: Bone, index: number) {
+  const question = boneFunctions[bone.id];
+  const choices = [...question.distractors];
+  choices.splice(index % 3, 0, question.correct);
+  return choices;
+}
+
 function SkeletonMap({
   focus,
   placed,
@@ -706,9 +715,19 @@ function SkeletonMap({
   );
 }
 
-function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+function BoneLesson({
+  onBack,
+  onComplete,
+  onQuizComplete,
+  xpAlreadyClaimed,
+}: {
+  onBack: () => void;
+  onComplete: () => void;
+  onQuizComplete: (earnedXp: number) => void;
+  xpAlreadyClaimed: boolean;
+}) {
   const [slide, setSlide] = useState(0);
-  const [phase, setPhase] = useState<"learn" | "question" | "practice" | "finished">("learn");
+  const [phase, setPhase] = useState<"learn" | "question" | "practice" | "final-quiz" | "finished">("learn");
   const [placed, setPlaced] = useState<Set<string>>(() => new Set());
   const [selectedBone, setSelectedBone] = useState<string | null>(null);
   const [draggedBone, setDraggedBone] = useState<string | null>(null);
@@ -716,10 +735,17 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
   const [mapExpression, setMapExpression] = useState<"neutral" | "frown" | "smile">("neutral");
   const [functionAnswer, setFunctionAnswer] = useState<number | null>(null);
   const [functionPassed, setFunctionPassed] = useState(false);
+  const [reviewIndex, setReviewIndex] = useState(0);
+  const [reviewAnswer, setReviewAnswer] = useState<number | null>(null);
+  const [reviewPassed, setReviewPassed] = useState(false);
+  const [reviewCorrectCount, setReviewCorrectCount] = useState(0);
+  const [reviewXp, setReviewXp] = useState(0);
   const focus = bones[slide];
   const functionQuestion = boneFunctions[focus.id];
-  const functionChoices = [...functionQuestion.distractors];
-  functionChoices.splice(slide % 3, 0, functionQuestion.correct);
+  const functionChoices = getFunctionChoices(focus, slide);
+  const reviewBone = bones[reviewIndex];
+  const reviewQuestion = boneFunctions[reviewBone.id];
+  const reviewChoices = getFunctionChoices(reviewBone, reviewIndex);
   const availableBones = bones.slice(0, slide + 1);
   const allAvailableBonesPlaced = availableBones.every((bone) => placed.has(bone.id));
   const focusX = focus.imageX / 435.687;
@@ -787,7 +813,7 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
 
   function goToNextSlide() {
     if (slide === bones.length - 1) {
-      setPhase("finished");
+      setPhase("final-quiz");
       return;
     }
     setSlide(slide + 1);
@@ -813,6 +839,18 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
     setFeedback("");
   }
 
+  function advanceReview() {
+    if (!reviewPassed) return;
+    if (reviewIndex === bones.length - 1) {
+      onQuizComplete(reviewXp);
+      setPhase("finished");
+      return;
+    }
+    setReviewIndex(reviewIndex + 1);
+    setReviewAnswer(null);
+    setReviewPassed(false);
+  }
+
   if (phase === "finished") {
     return (
       <main className="bone-lesson-page">
@@ -824,8 +862,13 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
         <section className="lesson-finish-card">
           <span className="finish-badge">🎉</span>
           <span className="eyebrow">BONE-RILLIANT WORK!</span>
-          <h1>You built Benny’s skeleton!</h1>
-          <p>You learned about 14 important bones and found every spot. Your skeleton is smiling because of you!</p>
+          <h1>Final quiz complete!</h1>
+          <p>You got {reviewCorrectCount} out of {bones.length} questions right. You learned about 14 bones and helped build Benny’s skeleton.</p>
+          <div className="lesson-results-stats">
+            <div><strong>{reviewCorrectCount}/{bones.length}</strong><span>correct answers</span></div>
+            <div><strong>+{reviewXp} XP</strong><span>{reviewXp ? "added to your account" : "already collected"}</span></div>
+          </div>
+          <p className="lesson-xp-note">Your XP is saved for future Bone Buddies games!</p>
           <button className="primary-button" type="button" onClick={onComplete}>Back to my lessons <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon></button>
         </section>
       </main>
@@ -850,6 +893,10 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
             <div className="learning-progress">
               <div className="bone-progress-label"><span>BONE FUNCTION CHECK</span><strong>{slide + 1} of {bones.length}</strong></div>
               <div className="bone-progress-track"><span style={{ width: `${((slide + 1) / bones.length) * 100}%` }} /></div>
+            </div>
+          ) : phase === "final-quiz" ? (
+            <div className="bone-progress-label">
+              <span>FINAL BONE QUIZ</span><strong>Question {reviewIndex + 1} of {bones.length}</strong>
             </div>
           ) : (
             <>
@@ -983,6 +1030,56 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
               {functionPassed && (
                 <button className="primary-button" type="button" onClick={() => { setPhase("practice"); setFeedback(""); setMapExpression("neutral"); }}>
                   Body map <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                </button>
+              )}
+            </div>
+          </section>
+        ) : phase === "final-quiz" ? (
+          <section className="bone-function-card lesson-review-card">
+            <span className="eyebrow">FINAL REVIEW</span>
+            <h1>What does the {reviewBone.name} help do?</h1>
+            <p className="muted">Answer questions about all the bones you learned.</p>
+            <div className="review-score-row">
+              <span>Question {reviewIndex + 1} of {bones.length}</span>
+              <strong>{reviewCorrectCount} correct · {reviewXp} XP earned</strong>
+            </div>
+            <div className="bone-progress-track review-progress-track">
+              <span style={{ width: `${((reviewIndex + 1) / bones.length) * 100}%` }} />
+            </div>
+            <p className="review-xp-callout">
+              {xpAlreadyClaimed ? "You’ve already collected XP for this quiz. Replay to practice!" : "Earn 10 XP for every correct answer!"}
+            </p>
+            <div className="function-options stacked-choices">
+              {reviewChoices.map((choice, index) => (
+                <ChoiceButton
+                  key={choice}
+                  active={reviewAnswer === index}
+                  status={reviewAnswer === index ? (reviewPassed ? "correct" : "incorrect") : undefined}
+                  onClick={() => {
+                    if (reviewPassed) return;
+                    const isCorrect = choice === reviewQuestion.correct;
+                    setReviewAnswer(index);
+                    setReviewPassed(isCorrect);
+                    if (isCorrect) {
+                      setReviewCorrectCount(reviewCorrectCount + 1);
+                      if (!xpAlreadyClaimed) setReviewXp(reviewXp + 10);
+                    }
+                  }}
+                >
+                  {choice}
+                </ChoiceButton>
+              ))}
+            </div>
+            {reviewAnswer !== null && (
+              <p className={`function-feedback ${reviewPassed ? "function-correct" : ""}`} role="status">
+                {reviewPassed ? `That’s right! ${reviewQuestion.correct}` : "Not quite. Give it another try!"}
+              </p>
+            )}
+            <div className="function-actions review-actions">
+              {reviewPassed && (
+                <button className="primary-button" type="button" onClick={advanceReview}>
+                  {reviewIndex === bones.length - 1 ? "See results" : "Next question"}
+                  <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
                 </button>
               )}
             </div>
@@ -1201,12 +1298,18 @@ function DailyQuestion() {
 function Home({
   profile,
   streak,
+  xp,
+  lesson1QuizCompleted,
   onLessonComplete,
+  onLessonQuizComplete,
   onSignOut,
 }: {
   profile: Profile;
   streak: number;
+  xp: number;
+  lesson1QuizCompleted: boolean;
   onLessonComplete: () => void;
+  onLessonQuizComplete: (earnedXp: number) => void;
   onSignOut: () => void;
 }) {
   const [message, setMessage] = useState("Your bones are living tissue. That means they can fix themselves!");
@@ -1217,6 +1320,8 @@ function Home({
     return (
       <BoneLesson
         onBack={() => setShowLesson(false)}
+        xpAlreadyClaimed={lesson1QuizCompleted}
+        onQuizComplete={onLessonQuizComplete}
         onComplete={() => {
           if (!completedLessons.includes(0)) {
             setCompletedLessons([...completedLessons, 0]);
@@ -1242,6 +1347,10 @@ function Home({
       <header className="home-nav">
         <BoneLogo />
         <div className="nav-actions">
+          <div className="xp-pill" title="Experience points saved for future games">
+            <Icon><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" /></Icon>
+            <strong>{xp} XP</strong>
+          </div>
           <div className="streak-pill" title="Learning streak">
             <Icon size={18} viewBox="0 0 24 24"><path d="M12 22c4.4 0 8-3.6 8-8 0-5-4-9-8-12-1 5-8 7-8 13 0 3.9 3.6 7 8 7Z" /><path d="M9 18c0-3 3-4 3-7 2 2 3 4 3 6a3 3 0 0 1-6 1Z" /></Icon>
             <strong>{streak}</strong><span>day streak</span>
@@ -1405,7 +1514,19 @@ export default function App() {
     <Home
       profile={profile}
       streak={streakData.count}
+      xp={account?.xp ?? 0}
+      lesson1QuizCompleted={account?.lesson1QuizCompleted ?? false}
       onLessonComplete={completeLesson}
+      onLessonQuizComplete={(earnedXp) => {
+        if (!account || account.lesson1QuizCompleted) return;
+        const updatedAccount = {
+          ...account,
+          xp: (account.xp ?? 0) + earnedXp,
+          lesson1QuizCompleted: true,
+        };
+        saveAccount(updatedAccount, loadAccounts());
+        setAccount(updatedAccount);
+      }}
       onSignOut={() => {
         setAccount(null);
         setScreen("signin");
