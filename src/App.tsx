@@ -556,7 +556,7 @@ type Bone = {
 };
 
 const bones: Bone[] = [
-  { id: "skull", name: "Skull", region: "Head", description: "Your skull is the hard helmet around your brain. It helps keep your brain safe.", landmark: "the head", x: 160, y: 42 },
+  { id: "skull", name: "Skull", region: "Head", description: "Your skull is a hard helmet that protects your brain.", landmark: "top of your head", x: 160, y: 42 },
   { id: "rib-cage", name: "Rib cage", region: "Chest", description: "Your rib cage is a group of curved bones around your chest. It helps protect your heart and lungs.", landmark: "the curved bones around the chest", x: 180, y: 111 },
   { id: "sternum", name: "Sternum", region: "Chest", description: "The sternum is one flat bone in the middle of your chest. Your ribs meet it at the front.", landmark: "the flat bone in the middle of the chest", x: 160, y: 120 },
   { id: "humerus", name: "Humerus", region: "Arm", description: "The humerus is the long bone in your upper arm, between your shoulder and elbow.", landmark: "the upper arm", x: 111, y: 155 },
@@ -585,20 +585,13 @@ function SkeletonMap({
   onChooseSpot?: (spotId: string) => void;
   interactive?: boolean;
 }) {
-  const regionViewBoxes: Record<string, string> = {
-    Head: "75 0 170 110",
-    Chest: "75 68 170 110",
-    Arm: "35 85 155 145",
-    Forearm: "55 122 105 118",
-    Hand: "22 176 115 122",
-    Leg: "108 195 108 105",
-    Knee: "110 235 105 95",
-    "Lower leg": "105 270 110 110",
-    Hips: "100 145 120 115",
-  };
-
   return (
-    <svg className="skeleton-map" viewBox={regionViewBoxes[focus.region] ?? "0 0 320 390"} role="img" aria-label={`Zoomed-in skeleton picture near the ${focus.name}`}>
+    <svg
+      className="skeleton-map"
+      viewBox="0 0 320 390"
+      role="img"
+      aria-label={`Skeleton map near the ${focus.name}`}
+    >
       <g className="skeleton-drawing" aria-hidden="true">
         <path className="skeleton-spine" d="M160 75v138" />
         <path className="skeleton-bone" d="M136 22c-13 0-22 10-22 23v8c0 14 10 24 22 24h48c13 0 22-10 22-24v-8c0-13-9-23-22-23z" />
@@ -618,6 +611,9 @@ function SkeletonMap({
         <path className="skeleton-fibula" d="m153 283-8 66m27-66 10 66" />
         <path className="skeleton-foot" d="m143 350-2 14-13 7q-4 6 3 7h30l-1-8-12-7m29-13 2 14 13 7q4 6-3 7h-30l1-8 12-7" />
       </g>
+      {!interactive && (
+        <circle className="focus-halo" cx={focus.x} cy={focus.y} r="15" />
+      )}
       {bones.map((bone) => {
         const isPlaced = placed.has(bone.id);
         const isFocus = focus.id === bone.id;
@@ -655,6 +651,8 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
   const [draggedBone, setDraggedBone] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
   const focus = bones[slide];
+  const focusX = focus.x / 320;
+  const focusY = focus.id === "skull" ? 0.055 : focus.y / 390;
 
   function placeBone(boneId: string, spotId: string) {
     const bone = bones.find((item) => item.id === boneId);
@@ -713,27 +711,70 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
         <BoneLogo />
         <span className="lesson-top-progress">LESSON 1 OF 4</span>
       </header>
-      <div className="bone-lesson-wrap">
+      <div className={`bone-lesson-wrap ${phase === "learn" ? "learning-phase" : ""}`}>
         <div className="bone-lesson-heading">
-          <span className="eyebrow">{phase === "learn" ? "MEET THE BONES" : "BODY MAP CHALLENGE"}</span>
-          <h1>{phase === "learn" ? "Let’s learn our bones!" : "Help Benny build his skeleton!"}</h1>
-          <p>{phase === "learn" ? "Meet one important bone, then help Benny find it." : "Choose a bone name, then drag it or tap its spot. You can place them in any order!"}</p>
-          <div className="bone-progress-label"><span>{placed.size} of {bones.length} bones placed</span><strong>{slide + 1} / {bones.length} slides</strong></div>
-          <div className="bone-progress-track"><span style={{ width: `${(placed.size / bones.length) * 100}%` }} /></div>
+          {phase === "learn" ? (
+            <div className="learning-progress">
+              <div className="bone-progress-label"><span>MEET THE BONES</span><strong>{slide + 1} of {bones.length}</strong></div>
+              <div className="bone-progress-track"><span style={{ width: `${((slide + 1) / bones.length) * 100}%` }} /></div>
+            </div>
+          ) : (
+            <>
+              <span className="eyebrow">BODY MAP CHALLENGE</span>
+              <h1>Help Benny build his skeleton!</h1>
+              <p>Choose a bone name, then drag it or tap its spot. You can place them in any order!</p>
+              <div className="bone-progress-label"><span>{placed.size} of {bones.length} bones placed</span><strong>{slide + 1} / {bones.length} slides</strong></div>
+              <div className="bone-progress-track"><span style={{ width: `${(placed.size / bones.length) * 100}%` }} /></div>
+            </>
+          )}
         </div>
 
         {phase === "learn" ? (
           <section className="bone-slide-card">
             <div className="bone-illustration-panel">
-              <span className="illustration-label">BONE BUDDIES BODY PICTURE</span>
-              <div className="bone-focus-ring"><span>{focus.region}</span><SkeletonMap focus={focus} placed={new Set()} selectedBone={null} interactive={false} /></div>
-              <span className="illustration-caption">Benny’s skeleton · {focus.region.toLowerCase()} view</span>
+              <span className="illustration-label">Look here: {focus.landmark.charAt(0).toUpperCase() + focus.landmark.slice(1)}</span>
+              <div className="bone-focus-ring">
+                <img
+                  className="lesson-skeleton-image"
+                  src="/human-skeleton-front-no-labels.svg"
+                  alt="Unlabeled front view of a human skeleton"
+                />
+                <span
+                  className="lesson-focus-marker"
+                  style={{ left: `${focusX * 100}%`, top: `${focusY * 100}%` }}
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="bone-zoom-card">
+                <img
+                  src="/human-skeleton-front-no-labels.svg"
+                  alt=""
+                  style={{
+                    width: "240%",
+                    left: `calc(50% - ${focusX * 240}%)`,
+                    top: `calc(50% - ${focusY * 464}%)`,
+                  }}
+                />
+                <span className="zoom-focus-marker" aria-hidden="true" />
+                <span>ZOOM</span>
+              </div>
+              <a
+                className="illustration-credit"
+                href="https://commons.wikimedia.org/wiki/File:Human_skeleton_front_-_no_labels.svg"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Mikael Häggström / LadyofHats · Wikimedia Commons · Public domain
+              </a>
             </div>
             <div className="bone-slide-copy">
-              <div className="slide-number">BONE {String(slide + 1).padStart(2, "0")} OF 14</div>
+              <div className="slide-number">BONE {String(slide + 1).padStart(2, "0")}</div>
               <h2>{focus.name}</h2>
-              <span className="bone-region-tag">{focus.region}</span>
               <p>{focus.description}</p>
+              <div className="bone-location">
+                <Icon><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></Icon>
+                <strong>{focus.landmark.charAt(0).toUpperCase() + focus.landmark.slice(1)}</strong>
+              </div>
               {(focus.id === "sternum" || focus.id === "rib-cage") && (
                 <p className="bone-side-note"><strong>Remember:</strong> The rib cage is the curved group around the chest. The sternum is just the flat bone down the middle at the front.</p>
               )}
@@ -743,9 +784,12 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
               {(focus.id === "tibia" || focus.id === "fibula") && (
                 <p className="bone-side-note"><strong>Remember:</strong> The tibia is the bigger shin bone. The fibula is the thinner bone beside it on the outside.</p>
               )}
+              <button className="primary-button quick-check-button" type="button" onClick={() => { setPhase("practice"); setFeedback(""); }}>
+                Quick check <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+              </button>
               <div className="bone-slide-actions">
-                <button className="back-button" type="button" disabled={slide === 0} onClick={() => setSlide(slide - 1)}>← Previous bone</button>
-                <button className="primary-button" type="button" onClick={() => { setPhase("practice"); setFeedback(""); }}>Quick check <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon></button>
+                <button className="back-button" type="button" disabled={slide === 0} onClick={() => setSlide(slide - 1)}>← Back</button>
+                <span>One bone at a time!</span>
               </div>
             </div>
           </section>
@@ -1155,7 +1199,7 @@ export default function App() {
         profile={profile}
         setProfile={setProfile}
         onDone={() => {
-          if (account) saveAccount({ ...account, profile });
+          if (account) saveAccount({ ...account, profile }, loadAccounts());
           setScreen("home");
         }}
       />
