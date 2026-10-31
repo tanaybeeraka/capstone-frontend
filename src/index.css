@@ -77,7 +77,7 @@ label { display: grid; gap: 8px; font-weight: 700; font-size: .9rem; }
 .primary-button:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; transform: none; }
 .divider { height: 1px; background: var(--line); margin: 30px 0 20px; text-align: center; }
 .divider span { position: relative; top: -9px; padding: 0 12px; background: var(--paper); color: var(--muted); font-size: .72rem; font-weight: 700; }
-.text-button, .quiet-button, .nav-link { border: 0; background: transparent; cursor: pointer; font-weight: 700; }
+.text-button, .quiet-button { border: 0; background: transparent; cursor: pointer; font-weight: 700; }
 .text-button { width: 100%; color: var(--green-dark); }
 .grownup-note { display: flex; justify-content: center; align-items: center; gap: 7px; margin: 32px 0 0; color: var(--muted); font-size: .78rem; }
 
@@ -103,6 +103,8 @@ label { display: grid; gap: 8px; font-weight: 700; font-size: .9rem; }
 .choice-active { border-color: var(--green-dark); background: color-mix(in oklch, var(--green) 10%, white); color: var(--green-dark); }
 .choice-check { width: 24px; height: 24px; display: grid; place-items: center; flex: 0 0 auto; border: 1.5px solid var(--line); border-radius: 50%; color: var(--paper); }
 .choice-active .choice-check { border-color: var(--green-dark); background: var(--green-dark); }
+.choice.choice-incorrect { border-color: #cf4149; background: #fff0f1; color: #a92f38; }
+.choice-incorrect .choice-check { border-color: #cf4149; background: #cf4149; }
 .quiz-actions { display: flex; justify-content: space-between; gap: 16px; margin-top: auto; }
 .quiz-actions .primary-button { min-width: 145px; }
 .back-button { background: transparent; color: var(--muted); }
@@ -110,10 +112,6 @@ label { display: grid; gap: 8px; font-weight: 700; font-size: .9rem; }
 
 .home-page { min-height: 100vh; background: var(--cream); }
 .home-nav { position: sticky; top: 0; z-index: 10; }
-.home-nav nav { display: flex; align-self: stretch; gap: 34px; }
-.nav-link { position: relative; color: var(--muted); }
-.nav-link.active { color: var(--ink); }
-.nav-link.active::after { content: ""; height: 3px; position: absolute; left: 0; right: 0; bottom: 0; background: var(--green); border-radius: 3px 3px 0 0; }
 .nav-actions { display: flex; align-items: center; gap: 15px; }
 .streak-pill { display: flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; background: color-mix(in oklch, var(--coral) 12%, white); border-radius: 20px; color: var(--coral); }
 .streak-pill strong { color: var(--ink); }
@@ -134,6 +132,11 @@ label { display: grid; gap: 8px; font-weight: 700; font-size: .9rem; }
 .lesson-list { display: grid; gap: 12px; }
 .lesson-card { width: 100%; min-height: 106px; display: grid; grid-template-columns: 64px 1fr auto 22px; align-items: center; gap: 18px; border: 1px solid var(--line); border-radius: 17px; background: var(--paper); padding: 15px 22px 15px 15px; cursor: pointer; text-align: left; transition: transform .18s, box-shadow .18s, border-color .18s; }
 .lesson-card:hover { transform: translateY(-2px); border-color: color-mix(in oklch, var(--green) 55%, var(--line)); box-shadow: 0 10px 28px color-mix(in oklch, var(--ink) 8%, transparent); }
+.lesson-card.lesson-locked { cursor: not-allowed; background: color-mix(in oklch, var(--cream) 55%, white); }
+.lesson-card.lesson-locked:hover { transform: none; border-color: var(--line); box-shadow: none; }
+.lesson-card.lesson-locked .lesson-number { opacity: .58; box-shadow: none; }
+.lesson-card.lesson-locked > svg { color: var(--muted); }
+.lesson-card.lesson-locked .lesson-status { background: #edf0f3; color: #64717c; }
 .lesson-number { width: 60px; height: 66px; display: grid; place-items: center; border-radius: 13px; border: 1.5px solid var(--ink); box-shadow: 2px 2px 0 var(--ink); font: 700 1.1rem "Fredoka"; }
 .lesson-number.yellow { background: var(--yellow); }
 .lesson-number.coral { background: color-mix(in oklch, var(--coral) 72%, white); }
@@ -194,7 +197,7 @@ aside { display: grid; align-content: start; gap: 18px; }
 
 @media (max-width: 650px) {
   .field-row { grid-template-columns: 1fr; }
-  .quiz-header .brand-name, .home-nav .brand-name, .streak-pill span, .home-nav nav { display: none; }
+  .quiz-header .brand-name, .home-nav .brand-name, .streak-pill span { display: none; }
   .quiz-card { padding: 48px 22px 28px; }
   .quiz-mascot { width: 84px; right: 20px; top: -48px; }
   .grade-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -289,6 +292,14 @@ aside { display: grid; align-content: start; gap: 18px; }
 .bone-location svg { flex: 0 0 auto; }
 .bone-location strong { font-size: .92rem; }
 .quick-check-button { min-height: 58px; margin-top: clamp(68px, 12vh, 126px); padding: 0 23px; border-radius: 13px; background: #0759a7; box-shadow: 0 5px 0 #063d75; font-size: .95rem; }
+.bone-function-card { width: min(100%, 760px); min-height: 500px; margin: 0 auto; padding: clamp(28px, 5vw, 56px); border: 1px solid #d5e7f2; border-radius: 20px; background: white; box-shadow: 0 12px 32px #244a6310; }
+.bone-function-card h1 { margin: 10px 0 8px; color: #092d4c; font-size: clamp(1.8rem, 3.5vw, 2.5rem); }
+.bone-function-card > p.muted { margin-bottom: 24px; }
+.function-options { gap: 12px; }
+.function-feedback { min-height: 26px; margin: 18px 0 0; color: #9c542b; font-size: .88rem; font-weight: 700; }
+.function-feedback.function-correct { color: #197c67; }
+.function-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 40px; }
+.function-actions .primary-button { min-height: 46px; }
 .bone-slide-card .bone-slide-actions { padding-top: 30px; }
 .bone-slide-card .bone-slide-actions .back-button:disabled { visibility: visible; opacity: .55; cursor: default; }
 .bone-slide-actions > span { color: #60798b; font-size: .76rem; font-weight: 700; }
@@ -359,6 +370,9 @@ aside { display: grid; align-content: start; gap: 18px; }
   .bone-slide-card .bone-illustration-panel { min-height: 410px; padding: 45px 18px 22px; }
   .bone-slide-card .bone-slide-copy { min-height: 470px; padding: 28px 22px; }
   .bone-slide-card .bone-slide-copy h2 { font-size: 2.6rem; }
+  .bone-function-card { min-height: 0; padding: 28px 20px; }
+  .function-actions { align-items: stretch; flex-direction: column-reverse; margin-top: 24px; }
+  .function-actions .primary-button { width: 100%; }
   .bone-zoom-card { right: 12px; bottom: 12px; width: 96px; height: 96px; }
   .bone-zoom-card .zoom-focus-marker { width: 15px; height: 15px; }
   .bone-slide-actions { padding-top: 22px; }

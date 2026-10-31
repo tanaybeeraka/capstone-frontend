@@ -1,4 +1,4 @@
-import { FormEvent, InputHTMLAttributes, ReactNode, useState } from "react";
+import { DragEvent, FormEvent, InputHTMLAttributes, ReactNode, useState } from "react";
 
 type Screen = "signin" | "quiz" | "home";
 
@@ -315,13 +315,15 @@ function ChoiceButton({
   active,
   children,
   onClick,
+  status,
 }: {
   active: boolean;
   children: ReactNode;
   onClick: () => void;
+  status?: "correct" | "incorrect";
 }) {
   return (
-    <button className={`choice ${active ? "choice-active" : ""}`} type="button" onClick={onClick}>
+    <button className={`choice ${active ? "choice-active" : ""} ${status ? `choice-${status}` : ""}`} type="button" onClick={onClick}>
       <span>{children}</span>
       <span className="choice-check">{active ? "✓" : ""}</span>
     </button>
@@ -540,7 +542,7 @@ function Questionnaire({
 
 const lessons = [
   { number: "01", title: "Basic bone structure", note: "Meet 14 important bones", tone: "yellow", progress: 0 },
-  { number: "02", title: "Lesson 2", note: "Lesson placeholder", tone: "coral", progress: 45 },
+  { number: "02", title: "Lesson 2", note: "Lesson placeholder", tone: "coral", progress: 0 },
   { number: "03", title: "Lesson 3", note: "Lesson placeholder", tone: "blue", progress: 0 },
   { number: "04", title: "Lesson 4", note: "Lesson placeholder", tone: "green", progress: 0 },
 ];
@@ -553,23 +555,84 @@ type Bone = {
   landmark: string;
   x: number;
   y: number;
+  imageX: number;
+  imageY: number;
+};
+
+const boneFunctions: Record<string, { correct: string; distractors: [string, string] }> = {
+  skull: {
+    correct: "It protects your brain.",
+    distractors: ["It helps your lungs breathe.", "It bends your knee."],
+  },
+  "rib-cage": {
+    correct: "It helps protect your heart and lungs.",
+    distractors: ["It helps your wrist turn.", "It supports your ankle."],
+  },
+  sternum: {
+    correct: "It gives your ribs a place to connect at the front of your chest.",
+    distractors: ["It protects your brain.", "It helps your fingers bend."],
+  },
+  humerus: {
+    correct: "It helps your upper arm move between your shoulder and elbow.",
+    distractors: ["It protects your heart and lungs.", "It helps your ankle stay steady."],
+  },
+  radius: {
+    correct: "It helps your forearm and wrist turn on the thumb side.",
+    distractors: ["It protects your brain.", "It supports your upper body at the hips."],
+  },
+  ulna: {
+    correct: "It helps form your elbow and supports your forearm on the pinky side.",
+    distractors: ["It protects your heart.", "It helps your toes bend."],
+  },
+  carpals: {
+    correct: "They help your wrist bend and turn.",
+    distractors: ["They protect your brain.", "They carry most of your body's weight."],
+  },
+  metacarpals: {
+    correct: "They support the middle of your hand and connect your wrist to your fingers.",
+    distractors: ["They protect your lungs.", "They help your knee bend."],
+  },
+  phalanges: {
+    correct: "They help your fingers and toes bend and move.",
+    distractors: ["They protect your heart.", "They support your skull."],
+  },
+  femur: {
+    correct: "It supports your weight and helps your leg move.",
+    distractors: ["It protects your brain.", "It helps your wrist turn."],
+  },
+  patella: {
+    correct: "It protects the front of your knee and helps it move.",
+    distractors: ["It protects your lungs.", "It connects your fingers to your hand."],
+  },
+  fibula: {
+    correct: "It helps stabilize your lower leg and ankle.",
+    distractors: ["It protects your brain.", "It supports your ribs at the front of your chest."],
+  },
+  tibia: {
+    correct: "It carries much of your weight through your lower leg.",
+    distractors: ["It helps your wrist bend.", "It protects your heart and lungs."],
+  },
+  pelvis: {
+    correct: "It supports your body and protects organs inside your hips.",
+    distractors: ["It protects your brain.", "It helps your fingers bend."],
+  },
 };
 
 const bones: Bone[] = [
-  { id: "skull", name: "Skull", region: "Head", description: "Your skull is a hard helmet that protects your brain.", landmark: "top of your head", x: 160, y: 42 },
-  { id: "rib-cage", name: "Rib cage", region: "Chest", description: "Your rib cage is a group of curved bones around your chest. It helps protect your heart and lungs.", landmark: "the curved bones around the chest", x: 180, y: 111 },
-  { id: "sternum", name: "Sternum", region: "Chest", description: "The sternum is one flat bone in the middle of your chest. Your ribs meet it at the front.", landmark: "the flat bone in the middle of the chest", x: 160, y: 120 },
-  { id: "humerus", name: "Humerus", region: "Arm", description: "The humerus is the long bone in your upper arm, between your shoulder and elbow.", landmark: "the upper arm", x: 111, y: 155 },
-  { id: "radius", name: "Radius", region: "Forearm", description: "The radius is one of your two forearm bones. With your palm facing forward, it is on the thumb side.", landmark: "the thumb side of the forearm", x: 93, y: 196 },
-  { id: "ulna", name: "Ulna", region: "Forearm", description: "The ulna is the other forearm bone. With your palm facing forward, it is on the pinky side.", landmark: "the pinky side of the forearm", x: 109, y: 196 },
-  { id: "carpals", name: "Carpals", region: "Hand", description: "Carpals are the small bones that make up your wrist. They help your hand bend and turn.", landmark: "the wrist", x: 79, y: 220 },
-  { id: "metacarpals", name: "Metacarpals", region: "Hand", description: "Metacarpals are the long bones in the middle of your hand, between your wrist and fingers.", landmark: "the middle of the hand", x: 70, y: 237 },
-  { id: "phalanges", name: "Phalanges", region: "Hand", description: "Phalanges are the bones in your fingers and toes. This map points to the finger bones.", landmark: "the fingers", x: 61, y: 253 },
-  { id: "femur", name: "Femur", region: "Leg", description: "The femur is your thigh bone. It is the longest and strongest bone in your body.", landmark: "the thigh", x: 146, y: 249 },
-  { id: "patella", name: "Patella", region: "Knee", description: "The patella is your kneecap. It sits at the front of your knee and helps protect it.", landmark: "the front of the knee", x: 146, y: 279 },
-  { id: "fibula", name: "Fibula", region: "Lower leg", description: "The fibula is the thinner bone along the outer side of your lower leg. It sits beside the tibia.", landmark: "the thinner bone on the outer side", x: 164, y: 326 },
-  { id: "tibia", name: "Tibia", region: "Lower leg", description: "The tibia is the bigger, strong bone at the front and inner side of your lower leg. It carries lots of your weight.", landmark: "the big shin bone on the inner side", x: 145, y: 326 },
-  { id: "pelvis", name: "Pelvis", region: "Hips", description: "Your pelvis is a strong group of bones at your hips. It helps support your body and protects organs inside.", landmark: "the hips", x: 160, y: 204 },
+  { id: "skull", name: "Skull", region: "Head", description: "Your skull is a hard helmet that protects your brain.", landmark: "top of your head", x: 160, y: 42, imageX: 203, imageY: 43 },
+  { id: "rib-cage", name: "Rib cage", region: "Chest", description: "Your rib cage is a group of curved bones around your chest. It helps protect your heart and lungs.", landmark: "the curved bones around the chest", x: 180, y: 111, imageX: 244, imageY: 232 },
+  { id: "sternum", name: "Sternum", region: "Chest", description: "The sternum is one flat bone in the middle of your chest. Your ribs meet it at the front.", landmark: "the flat bone in the middle of the chest", x: 160, y: 120, imageX: 204, imageY: 208 },
+  { id: "humerus", name: "Humerus", region: "Arm", description: "The humerus is the long bone in your upper arm, between your shoulder and elbow.", landmark: "the upper arm", x: 111, y: 155, imageX: 101, imageY: 239 },
+  { id: "radius", name: "Radius", region: "Forearm", description: "The radius is one of your two forearm bones. With your palm facing forward, it is on the thumb side.", landmark: "the thumb side of the forearm", x: 92, y: 174, imageX: 75, imageY: 360 },
+  { id: "ulna", name: "Ulna", region: "Forearm", description: "The ulna is the other forearm bone. With your palm facing forward, it is on the pinky side.", landmark: "the pinky side of the forearm", x: 106, y: 174, imageX: 89, imageY: 360 },
+  { id: "carpals", name: "Carpals", region: "Hand", description: "Carpals are the small bones that make up your wrist. They help your hand bend and turn.", landmark: "the wrist", x: 98, y: 193, imageX: 79, imageY: 423 },
+  { id: "metacarpals", name: "Metacarpals", region: "Hand", description: "Metacarpals are the long bones in the middle of your hand, between your wrist and fingers.", landmark: "the middle of the hand", x: 90, y: 208, imageX: 84, imageY: 441 },
+  { id: "phalanges", name: "Phalanges", region: "Hand", description: "Phalanges are the bones in your fingers and toes. This map points to the finger bones.", landmark: "the fingers", x: 80, y: 225, imageX: 94, imageY: 468 },
+  { id: "femur", name: "Femur", region: "Leg", description: "The femur is your thigh bone. It is the longest and strongest bone in your body.", landmark: "the thigh", x: 146, y: 249, imageX: 243, imageY: 486 },
+  { id: "patella", name: "Patella", region: "Knee", description: "The patella is your kneecap. It sits at the front of your knee and helps protect it.", landmark: "the front of the knee", x: 146, y: 279, imageX: 229, imageY: 593 },
+  { id: "fibula", name: "Fibula", region: "Lower leg", description: "The fibula is the thinner bone along the outer side of your lower leg. It sits beside the tibia.", landmark: "the thinner bone on the outer side", x: 164, y: 326, imageX: 237, imageY: 685 },
+  { id: "tibia", name: "Tibia", region: "Lower leg", description: "The tibia is the bigger, strong bone at the front and inner side of your lower leg. It carries lots of your weight.", landmark: "the big shin bone on the inner side", x: 145, y: 326, imageX: 219, imageY: 680 },
+  { id: "pelvis", name: "Pelvis", region: "Hips", description: "Your pelvis is a strong group of bones at your hips. It helps support your body and protects organs inside.", landmark: "the hips", x: 160, y: 204, imageX: 203, imageY: 367 },
 ];
 
 function SkeletonMap({
@@ -634,7 +697,7 @@ function SkeletonMap({
             } : undefined}
           >
             <circle className="spot-hit-area" cx={bone.x} cy={bone.y} r="13" />
-            <circle className="spot-dot" cx={bone.x} cy={bone.y} r="7" />
+            <circle className="spot-dot" cx={bone.x} cy={bone.y} r="6" />
             {isPlaced && <text className="spot-check" x={bone.x} y={bone.y + 3.5}>✓</text>}
           </g>
         );
@@ -645,22 +708,37 @@ function SkeletonMap({
 
 function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
   const [slide, setSlide] = useState(0);
-  const [phase, setPhase] = useState<"learn" | "practice" | "finished">("learn");
+  const [phase, setPhase] = useState<"learn" | "question" | "practice" | "finished">("learn");
   const [placed, setPlaced] = useState<Set<string>>(() => new Set());
   const [selectedBone, setSelectedBone] = useState<string | null>(null);
   const [draggedBone, setDraggedBone] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
+  const [mapExpression, setMapExpression] = useState<"neutral" | "frown" | "smile">("neutral");
+  const [functionAnswer, setFunctionAnswer] = useState<number | null>(null);
+  const [functionPassed, setFunctionPassed] = useState(false);
   const focus = bones[slide];
-  const focusX = focus.x / 320;
-  const focusY = focus.id === "skull" ? 0.055 : focus.y / 390;
+  const functionQuestion = boneFunctions[focus.id];
+  const functionChoices = [...functionQuestion.distractors];
+  functionChoices.splice(slide % 3, 0, functionQuestion.correct);
+  const availableBones = bones.slice(0, slide + 1);
+  const allAvailableBonesPlaced = availableBones.every((bone) => placed.has(bone.id));
+  const focusX = focus.imageX / 435.687;
+  const focusY = focus.imageY / 841.89;
 
   function placeBone(boneId: string, spotId: string) {
     const bone = bones.find((item) => item.id === boneId);
     const spot = bones.find((item) => item.id === spotId);
-    if (!bone || !spot || placed.has(boneId)) return;
+    if (
+      !bone ||
+      !spot ||
+      placed.has(boneId) ||
+      !availableBones.some((item) => item.id === boneId) ||
+      !availableBones.some((item) => item.id === spotId)
+    ) return;
 
     if (boneId !== spotId) {
-      setFeedback(`Good try! The ${bone.name} belongs at ${bone.landmark}, not the ${spot.name.toLowerCase()} spot. Benny knows you can find it!`);
+      setMapExpression("frown");
+      setFeedback(`Try again! The ${bone.name} belongs at ${bone.landmark}.`);
       return;
     }
 
@@ -668,11 +746,43 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
     setPlaced(nextPlaced);
     setSelectedBone(null);
     setDraggedBone(null);
+    setMapExpression("smile");
     setFeedback(
       boneId === focus.id
-        ? `Benny is smiling! You found the ${bone.name}!`
-        : `Great placing! The ${bone.name} is right at ${bone.landmark}. Now find the ${focus.name}.`,
+        ? `That's right! You found the ${bone.name}!`
+        : `That's right! The ${bone.name} belongs at ${bone.landmark}.`,
     );
+  }
+
+  function handleMapDrop(event: DragEvent<SVGSVGElement>) {
+    event.preventDefault();
+    const boneId = draggedBone || selectedBone;
+    if (!boneId) return;
+
+    const svg = event.currentTarget;
+    const transform = svg.getScreenCTM();
+    if (!transform) return;
+
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    const { x, y } = point.matrixTransform(transform.inverse());
+    const nearestSpot = availableBones.reduce<{ bone: Bone; distance: number } | null>((nearest, bone) => {
+      const distance = Math.hypot(bone.x - x, bone.y - y);
+      return !nearest || distance < nearest.distance ? { bone, distance } : nearest;
+    }, null);
+
+    if (nearestSpot && nearestSpot.distance <= 20) {
+      placeBone(boneId, nearestSpot.bone.id);
+      return;
+    }
+
+    const bone = bones.find((item) => item.id === boneId);
+    if (bone) {
+      setMapExpression("frown");
+      setFeedback(`Try again! Find the ${bone.name} spot on Benny’s skeleton.`);
+    }
+    setDraggedBone(null);
   }
 
   function goToNextSlide() {
@@ -681,6 +791,24 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
       return;
     }
     setSlide(slide + 1);
+    setPlaced(new Set());
+    setSelectedBone(null);
+    setDraggedBone(null);
+    setMapExpression("neutral");
+    setFunctionAnswer(null);
+    setFunctionPassed(false);
+    setPhase("learn");
+    setFeedback("");
+  }
+
+  function goToPreviousSlide() {
+    setSlide(slide - 1);
+    setPlaced(new Set());
+    setSelectedBone(null);
+    setDraggedBone(null);
+    setMapExpression("neutral");
+    setFunctionAnswer(null);
+    setFunctionPassed(false);
     setPhase("learn");
     setFeedback("");
   }
@@ -718,12 +846,17 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
               <div className="bone-progress-label"><span>MEET THE BONES</span><strong>{slide + 1} of {bones.length}</strong></div>
               <div className="bone-progress-track"><span style={{ width: `${((slide + 1) / bones.length) * 100}%` }} /></div>
             </div>
+          ) : phase === "question" ? (
+            <div className="learning-progress">
+              <div className="bone-progress-label"><span>BONE FUNCTION CHECK</span><strong>{slide + 1} of {bones.length}</strong></div>
+              <div className="bone-progress-track"><span style={{ width: `${((slide + 1) / bones.length) * 100}%` }} /></div>
+            </div>
           ) : (
             <>
               <span className="eyebrow">BODY MAP CHALLENGE</span>
               <h1>Help Benny build his skeleton!</h1>
-              <p>Choose a bone name, then drag it or tap its spot. You can place them in any order!</p>
-              <div className="bone-progress-label"><span>{placed.size} of {bones.length} bones placed</span><strong>{slide + 1} / {bones.length} slides</strong></div>
+              <p>Place each bone you’ve learned so far. The current bone is included.</p>
+              <div className="bone-progress-label"><span>{placed.size} of {availableBones.length} bones placed</span><strong>{slide + 1} / {bones.length} slides</strong></div>
               <div className="bone-progress-track"><span style={{ width: `${(placed.size / bones.length) * 100}%` }} /></div>
             </>
           )}
@@ -784,25 +917,86 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
               {(focus.id === "tibia" || focus.id === "fibula") && (
                 <p className="bone-side-note"><strong>Remember:</strong> The tibia is the bigger shin bone. The fibula is the thinner bone beside it on the outside.</p>
               )}
-              <button className="primary-button quick-check-button" type="button" onClick={() => { setPhase("practice"); setFeedback(""); }}>
+              <button
+                className="primary-button quick-check-button"
+                type="button"
+                onClick={() => {
+                  setFunctionAnswer(null);
+                  setFunctionPassed(false);
+                  setFeedback("");
+                  setPhase("question");
+                }}
+              >
                 Quick check <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
               </button>
               <div className="bone-slide-actions">
-                <button className="back-button" type="button" disabled={slide === 0} onClick={() => setSlide(slide - 1)}>← Back</button>
+                <button className="back-button" type="button" disabled={slide === 0} onClick={goToPreviousSlide}>← Back</button>
                 <span>One bone at a time!</span>
               </div>
+            </div>
+          </section>
+        ) : phase === "question" ? (
+          <section className="bone-function-card">
+            <span className="eyebrow">QUICK CHECK</span>
+            <h1>What does the {focus.name} help do?</h1>
+            <p className="muted">Choose the function that matches what you just learned.</p>
+            <div className="function-options stacked-choices">
+              {functionChoices.map((choice, index) => (
+                <ChoiceButton
+                  key={choice}
+                  active={functionAnswer === index}
+                  status={functionAnswer === index ? (functionPassed ? "correct" : "incorrect") : undefined}
+                  onClick={() => {
+                    if (functionPassed) return;
+                    const isCorrect = choice === functionQuestion.correct;
+                    setFunctionAnswer(index);
+                    setFunctionPassed(isCorrect);
+                    setFeedback(
+                      isCorrect
+                        ? `That's right! ${functionQuestion.correct}`
+                        : "Not quite. Think about the job of this bone and try again!",
+                    );
+                  }}
+                >
+                  {choice}
+                </ChoiceButton>
+              ))}
+            </div>
+            {feedback && (
+              <p className={`function-feedback ${functionPassed ? "function-correct" : ""}`} role="status">
+                {feedback}
+              </p>
+            )}
+            <div className="function-actions">
+              <button
+                className="back-button"
+                type="button"
+                onClick={() => {
+                  setPhase("learn");
+                  setFunctionAnswer(null);
+                  setFunctionPassed(false);
+                  setFeedback("");
+                }}
+              >
+                ← Back to {focus.name}
+              </button>
+              {functionPassed && (
+                <button className="primary-button" type="button" onClick={() => { setPhase("practice"); setFeedback(""); setMapExpression("neutral"); }}>
+                  Body map <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                </button>
+              )}
             </div>
           </section>
         ) : (
           <section className="bone-practice-card">
             <div className="bone-tray-panel">
               <div className="practice-title">
-                <div><span className="eyebrow">BONE NAMES</span><h2>Pick any bone</h2></div>
-                <span className="placed-count">{placed.size}/{bones.length}</span>
+                <div><span className="eyebrow">BONE NAMES</span><h2>Pick a bone</h2></div>
+                <span className="placed-count">{placed.size}/{availableBones.length}</span>
               </div>
-              <p className="practice-hint">The names can go in any order. Try dragging a name or tapping it first.</p>
+              <p className="practice-hint">Place the bones you’ve learned so far. You can do them in any order.</p>
               <div className="bone-name-tray">
-                {bones.map((bone) => (
+                {availableBones.map((bone) => (
                   <button
                     className={`bone-chip ${selectedBone === bone.id ? "chip-selected" : ""} ${placed.has(bone.id) ? "chip-placed" : ""}`}
                     type="button"
@@ -811,21 +1005,29 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
                     disabled={placed.has(bone.id)}
                     onClick={() => {
                       setSelectedBone(selectedBone === bone.id ? null : bone.id);
+                      setMapExpression("neutral");
                       setFeedback(placed.has(bone.id) ? "" : `Now tap the ${bone.name} spot on Benny’s map.`);
                     }}
-                    onDragStart={() => { setDraggedBone(bone.id); setSelectedBone(bone.id); }}
+                    onDragStart={(event) => {
+                      event.dataTransfer.setData("text/plain", bone.id);
+                      event.dataTransfer.effectAllowed = "move";
+                      setDraggedBone(bone.id);
+                      setSelectedBone(bone.id);
+                    }}
                   >
                     {placed.has(bone.id) ? "✓ " : ""}{bone.name}
                   </button>
                 ))}
               </div>
               <div className="benny-feedback" aria-live="polite">
-                <span className={`benny-face ${feedback.startsWith("Benny is smiling") || feedback.startsWith("Great placing") ? "benny-happy" : ""}`} aria-hidden="true">☺</span>
+                <span className={`benny-face ${mapExpression === "smile" ? "benny-happy" : ""}`} aria-hidden="true">
+                  {mapExpression === "frown" ? "☹" : "☺"}
+                </span>
                 <div><strong>Benny says</strong><p>{feedback || (placed.has(focus.id) ? `You already found the ${focus.name}! Benny’s map is smiling.` : `Can you find the ${focus.name}? Pick any name to start.`)}</p></div>
               </div>
               <div className="practice-actions">
                 <button className="back-button" type="button" onClick={() => { setPhase("learn"); setFeedback(""); }}>← Back to {focus.name}</button>
-                {placed.has(focus.id) && (
+                {allAvailableBonesPlaced && (
                   <button className="primary-button" type="button" onClick={goToNextSlide}>
                     {slide === bones.length - 1 ? "Finish lesson" : "Next bone"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
                   </button>
@@ -833,18 +1035,26 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
               </div>
             </div>
             <div className="bone-map-panel">
-              <div className="map-prompt"><strong>Find the {focus.name}</strong><span>Follow Benny’s map and drop it in the right place!</span></div>
+              <div className="map-prompt">
+                <strong>Find {availableBones.length === 1 ? "this bone" : "these bones"}</strong>
+                <span>Place each bone you’ve learned on its matching spot.</span>
+              </div>
               <svg
                 className="skeleton-map"
                 viewBox="0 0 320 390"
                 role="group"
-                aria-label="Benny's skeleton map. Drop a bone name on its matching spot."
+                aria-label={`Benny's skeleton map with ${availableBones.length} learned bone spots.`}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={handleMapDrop}
               >
                 <g className="skeleton-drawing" aria-hidden="true">
                   <path className="skeleton-spine" d="M160 75v138" />
                   <path className="skeleton-bone" d="M136 22c-13 0-22 10-22 23v8c0 14 10 24 22 24h48c13 0 22-10 22-24v-8c0-13-9-23-22-23z" />
                   <circle className="skeleton-joint" cx="148" cy="48" r="3" /><circle className="skeleton-joint" cx="172" cy="48" r="3" />
-                  <path className="skeleton-face" d={placed.size > 0 ? "M147 62q13 10 26 0" : "M147 63h26"} />
+                  <path
+                    className="skeleton-face"
+                    d={mapExpression === "frown" ? "M147 68q13-10 26 0" : mapExpression === "smile" ? "M147 62q13 10 26 0" : "M147 63h26"}
+                  />
                   <path className="skeleton-bone" d="M145 79v10m30-10v10M123 93q37-15 74 0M123 99q37 15 74 0M120 108q40-15 80 0M122 117q38 15 76 0M127 126q33-13 66 0M132 135q28 10 56 0" />
                   <path className="skeleton-sternum" d="M160 91v46" />
                   <path className="skeleton-bone" d="M125 94 109 102 101 145M195 94l16 8 8 43" />
@@ -859,7 +1069,7 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
                   <path className="skeleton-fibula" d="m153 283-8 66m27-66 10 66" />
                   <path className="skeleton-foot" d="m143 350-2 14-13 7q-4 6 3 7h30l-1-8-12-7m29-13 2 14 13 7q4 6-3 7h-30l1-8 12-7" />
                 </g>
-                {bones.map((bone) => {
+                {availableBones.map((bone) => {
                   const isPlaced = placed.has(bone.id);
                   return (
                     <g
@@ -876,20 +1086,15 @@ function BoneLesson({ onBack, onComplete }: { onBack: () => void; onComplete: ()
                         }
                       }}
                       onDragOver={(event) => event.preventDefault()}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        const boneId = draggedBone || selectedBone;
-                        if (boneId) placeBone(boneId, bone.id);
-                      }}
                     >
                       <circle className="spot-hit-area" cx={bone.x} cy={bone.y} r="13" />
-                      <circle className="spot-dot" cx={bone.x} cy={bone.y} r="7" />
+                      <circle className="spot-dot" cx={bone.x} cy={bone.y} r="6" />
                       {isPlaced && <text className="spot-check" x={bone.x} y={bone.y + 3.5}>✓</text>}
                     </g>
                   );
                 })}
               </svg>
-              <div className="map-caption"><span>Benny’s body map</span><strong>{placed.size} / {bones.length} placed</strong></div>
+              <div className="map-caption"><span>Benny’s body map</span><strong>{placed.size} / {availableBones.length} placed</strong></div>
             </div>
           </section>
         )}
@@ -1029,28 +1234,13 @@ function Home({
       return;
     }
 
-    if (index === 1 && !completedLessons.includes(index)) {
-      setCompletedLessons([...completedLessons, index]);
-      onLessonComplete();
-      setMessage(`${title} complete! Your learning streak is safe for today.`);
-      return;
-    }
-
-    setMessage(
-      index < 2
-        ? `${title} is ready for you! Lessons are coming in the next version.`
-        : "Keep learning to unlock this lesson.",
-    );
+    setMessage(`${title} is locked. Complete the earlier lessons to unlock it.`);
   }
 
   return (
     <main className="home-page">
       <header className="home-nav">
         <BoneLogo />
-        <nav aria-label="Main navigation">
-          <button className="nav-link active" type="button">Home</button>
-          <button className="nav-link" type="button" onClick={() => setMessage("Your collection will unlock as you complete lessons!")}>My stuff</button>
-        </nav>
         <div className="nav-actions">
           <div className="streak-pill" title="Learning streak">
             <Icon size={18} viewBox="0 0 24 24"><path d="M12 22c4.4 0 8-3.6 8-8 0-5-4-9-8-12-1 5-8 7-8 13 0 3.9 3.6 7 8 7Z" /><path d="M9 18c0-3 3-4 3-7 2 2 3 4 3 6a3 3 0 0 1-6 1Z" /></Icon>
@@ -1085,25 +1275,30 @@ function Home({
             <div className="lesson-list">
               {lessons.map((lesson, index) => (
                 <button
-                  className="lesson-card"
+                  className={`lesson-card ${index === 0 ? "lesson-open" : "lesson-locked"}`}
                   type="button"
                   key={lesson.number}
+                  disabled={index > 0}
                   onClick={() => openLesson(index, lesson.title)}
                 >
                   <span className={`lesson-number ${lesson.tone}`}>
-                    {completedLessons.includes(index) ? "✓" : lesson.number}
+                    {index === 0 && completedLessons.includes(index) ? "✓" : lesson.number}
                   </span>
                   <span className="lesson-info">
                     <strong>{lesson.title}</strong>
                     <small>{lesson.note}</small>
                     <span className="lesson-progress">
-                      <i style={{ width: `${completedLessons.includes(index) ? 100 : lesson.progress}%` }} />
+                      <i style={{ width: `${completedLessons.includes(index) ? 100 : index === 0 ? lesson.progress : 0}%` }} />
                     </span>
                   </span>
                   <span className="lesson-status">
-                    {completedLessons.includes(index) ? "Review" : lesson.progress > 0 ? "Continue" : "Locked"}
+                    {index === 0 ? (completedLessons.includes(index) ? "Review" : "Open") : "Locked"}
                   </span>
-                  <Icon><path d="m9 18 6-6-6-6" /></Icon>
+                  {index === 0 ? (
+                    <Icon><path d="m9 18 6-6-6-6" /></Icon>
+                  ) : (
+                    <Icon><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></Icon>
+                  )}
                 </button>
               ))}
             </div>
