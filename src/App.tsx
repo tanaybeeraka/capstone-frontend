@@ -1,4 +1,4 @@
-import { DragEvent, FormEvent, InputHTMLAttributes, ReactNode, useState } from "react";
+import { DragEvent, FormEvent, InputHTMLAttributes, ReactNode, useEffect, useRef, useState } from "react";
 
 type Screen = "signin" | "quiz" | "home";
 
@@ -718,11 +718,13 @@ function SkeletonMap({
 function BoneLesson({
   onBack,
   onComplete,
+  onPlayGame,
   onQuizComplete,
   xpAlreadyClaimed,
 }: {
   onBack: () => void;
   onComplete: () => void;
+  onPlayGame: () => void;
   onQuizComplete: (earnedXp: number) => void;
   xpAlreadyClaimed: boolean;
 }) {
@@ -868,8 +870,13 @@ function BoneLesson({
             <div><strong>{reviewCorrectCount}/{bones.length}</strong><span>correct answers</span></div>
             <div><strong>+{reviewXp} XP</strong><span>{reviewXp ? "added to your account" : "already collected"}</span></div>
           </div>
-          <p className="lesson-xp-note">Your XP is saved for future Bone Buddies games!</p>
-          <button className="primary-button" type="button" onClick={onComplete}>Back to my lessons <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon></button>
+          <p className="lesson-xp-note">Spend 10 XP per extra life in Bone Bonanza—or save your XP for later.</p>
+          <div className="lesson-finish-actions">
+            <button className="primary-button" type="button" onClick={() => { onComplete(); onPlayGame(); }}>
+              Play Bone Bonanza <Icon><path d="M8 5v14l11-7z" /></Icon>
+            </button>
+            <button className="back-button" type="button" onClick={onComplete}>Back to my lessons</button>
+          </div>
         </section>
       </main>
     );
@@ -1233,6 +1240,575 @@ const dailyQuestions = [
   },
 ];
 
+function BoneBeatGame({
+  xp,
+  onSpendXp,
+  onCollectStar,
+  onEarnQuizXp,
+  onExit,
+}: {
+  xp: number;
+  onSpendXp: (amount: number) => boolean;
+  onCollectStar: () => void;
+  onEarnQuizXp: (amount: number) => void;
+  onExit: () => void;
+}) {
+  const [active, setActive] = useState(false);
+  const [dead, setDead] = useState(false);
+  const [showRecoveryQuiz, setShowRecoveryQuiz] = useState(false);
+  const [difficulty, setDifficulty] = useState<"easy" | "hard">("easy");
+  const [distance, setDistance] = useState(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const heldDirections = useRef(new Set<string>());
+  const player = useRef({ x: 0, y: 0, angle: 0 });
+  const runStart = useRef(0);
+  const seed = useRef(0);
+  const collectedStars = useRef(new Set<string>());
+  const collectedStarCount = useRef(0);
+  const [starsCollected, setStarsCollected] = useState(0);
+  const collectStarRef = useRef(onCollectStar);
+  collectStarRef.current = onCollectStar;
+
+  function startRun() {
+    seed.current = Math.floor(Math.random() * 1_000_000);
+    player.current = { x: 0, y: 0, angle: 0 };
+    heldDirections.current.clear();
+    collectedStars.current.clear();
+    collectedStarCount.current = 0;
+    setStarsCollected(0);
+    setDistance(0);
+    setDead(false);
+    runStart.current = performance.now();
+    setActive(true);
+  }
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const foundContext = canvas.getContext("2d");
+    if (!foundContext) return;
+    const context: CanvasRenderingContext2D = foundContext;
+
+    const tileSize = 360;
+    const barrierSpacing = 390;
+    const barrierLaneSpacing = 76;
+    const playerRadius = 13;
+    let frame = 0;
+    let lastFrame = performance.now();
+    let lastHudUpdate = lastFrame;
+    let width = 0;
+    let height = 0;
+
+    const resize = () => {
+      const bounds = canvas.getBoundingClientRect();
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      width = bounds.width;
+      height = bounds.height;
+      canvas.width = Math.round(width * pixelRatio);
+      canvas.height = Math.round(height * pixelRatio);
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      drawMap(performance.now());
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+
+    function tileRandom(tx: number, ty: number, item: number) {
+      let value = Math.imul(tx + 127 + seed.current * 19, 374761393) + Math.imul(ty + 311, 668265263) + item * 2246822519;
+      value = Math.imul(value ^ (value >>> 13), 1274126177);
+      return ((value ^ (value >>> 16)) >>> 0) / 4294967296;
+    }
+
+    function drawBone(x: number, y: number, angle: number, size: number, color: string) {
+      context.save();
+      context.translate(x, y);
+      context.rotate(angle);
+      context.scale(size, size);
+      context.shadowColor = "#52644755";
+      context.shadowBlur = 5;
+      context.shadowOffsetY = 3;
+      context.fillStyle = color;
+      context.strokeStyle = "#806e4b";
+      context.lineWidth = 1.4;
+      context.beginPath();
+      context.moveTo(-20, -4);
+      context.bezierCurveTo(-27, -13, -38, -7, -33, 1);
+      context.bezierCurveTo(-39, 9, -27, 16, -20, 7);
+      context.lineTo(20, 7);
+      context.bezierCurveTo(27, 16, 39, 9, 33, 1);
+      context.bezierCurveTo(39, -7, 27, -13, 20, -4);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.restore();
+    }
+
+    function drawStar(x: number, y: number, pulse: number) {
+      context.save();
+      context.translate(x, y);
+      context.rotate(pulse);
+      context.shadowColor = "#e9a72c";
+      context.shadowBlur = 12;
+      context.fillStyle = "#ffcf4e";
+      context.strokeStyle = "#a86b24";
+      context.lineWidth = 2;
+      context.beginPath();
+      for (let point = 0; point < 10; point += 1) {
+        const radius = point % 2 === 0 ? 13 : 6;
+        const angle = -Math.PI / 2 + (point * Math.PI) / 5;
+        const px = Math.cos(angle) * radius;
+        const py = Math.sin(angle) * radius;
+        if (point === 0) context.moveTo(px, py);
+        else context.lineTo(px, py);
+      }
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.restore();
+    }
+
+    function drawPlayer(x: number, y: number, angle: number) {
+      context.save();
+      context.translate(x, y);
+      context.rotate(angle);
+      context.shadowColor = "#314b2b55";
+      context.shadowBlur = 12;
+      context.fillStyle = "#243d32";
+      context.beginPath();
+      context.ellipse(0, 1, 19, 23, 0, 0, Math.PI * 2);
+      context.fill();
+      context.shadowBlur = 0;
+      context.strokeStyle = "#fff4d1";
+      context.lineWidth = 4;
+      context.lineCap = "round";
+      context.beginPath();
+      context.moveTo(0, -7); context.lineTo(0, 11);
+      context.moveTo(-9, -4); context.quadraticCurveTo(0, -9, 9, -4);
+      context.moveTo(-9, 2); context.quadraticCurveTo(0, -3, 9, 2);
+      context.moveTo(-9, 8); context.quadraticCurveTo(0, 3, 9, 8);
+      context.moveTo(-8, -3); context.lineTo(-14, 5);
+      context.moveTo(8, -3); context.lineTo(14, 5);
+      context.moveTo(-6, 12); context.lineTo(-9, 19);
+      context.moveTo(6, 12); context.lineTo(9, 19);
+      context.stroke();
+      context.fillStyle = "#fff4d1";
+      context.beginPath();
+      context.arc(0, -14, 10, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = "#26392e";
+      context.beginPath();
+      context.arc(-3.5, -15, 1.8, 0, Math.PI * 2);
+      context.arc(3.5, -15, 1.8, 0, Math.PI * 2);
+      context.fill();
+      context.restore();
+    }
+
+    function drawMap(now: number) {
+      const current = player.current;
+      const playerScreenX = width * 0.32;
+      const cameraX = current.x - playerScreenX;
+      const cameraY = current.y - height / 2;
+      context.clearRect(0, 0, width, height);
+      context.fillStyle = "#b9c98d";
+      context.fillRect(0, 0, width, height);
+
+      const firstTileX = Math.floor(cameraX / tileSize) - 1;
+      const lastTileX = Math.floor((cameraX + width) / tileSize) + 1;
+      const firstTileY = Math.floor(cameraY / tileSize) - 1;
+      const lastTileY = Math.floor((cameraY + height) / tileSize) + 1;
+      for (let tx = firstTileX; tx <= lastTileX; tx += 1) {
+        for (let ty = firstTileY; ty <= lastTileY; ty += 1) {
+          const sx = tx * tileSize - cameraX;
+          const sy = ty * tileSize - cameraY;
+          const patch = tileRandom(tx, ty, 0);
+          context.fillStyle = patch > 0.5 ? "#c4d39a70" : "#82986722";
+          context.beginPath();
+          context.ellipse(
+            sx + tileSize * (0.25 + tileRandom(tx, ty, 17) * 0.5),
+            sy + tileSize * (0.25 + tileRandom(tx, ty, 18) * 0.5),
+            tileSize * (0.28 + tileRandom(tx, ty, 19) * 0.12),
+            tileSize * (0.26 + tileRandom(tx, ty, 20) * 0.12),
+            tileRandom(tx, ty, 21),
+            0,
+            Math.PI * 2,
+          );
+          context.fill();
+
+          for (let item = 0; item < 7; item += 1) {
+            const randomX = tileRandom(tx, ty, item * 3 + 1);
+            const randomY = tileRandom(tx, ty, item * 3 + 2);
+            const px = sx + 28 + randomX * (tileSize - 56);
+            const py = sy + 28 + randomY * (tileSize - 56);
+            if (item < 4) {
+              const speck = 2 + tileRandom(tx, ty, item * 3 + 3) * 3;
+              context.fillStyle = "#758a5b45";
+              context.beginPath();
+              context.arc(px, py, speck, 0, Math.PI * 2);
+              context.fill();
+            } else if (difficulty === "hard") {
+              const boneX = tx * tileSize + 28 + randomX * (tileSize - 56);
+              const boneY = ty * tileSize + 28 + randomY * (tileSize - 56);
+              const rotation = tileRandom(tx, ty, item * 11 + 4) * Math.PI;
+              const size = 0.72 + tileRandom(tx, ty, item * 11 + 5) * 0.55;
+              const boneColor = ["#f1e2bd", "#e7d6ad", "#f6ebd0"][Math.floor(tileRandom(tx, ty, item * 11 + 6) * 3)];
+              drawBone(boneX - cameraX, boneY - cameraY, rotation, size, boneColor);
+            }
+          }
+
+        }
+      }
+
+      const firstBarrier = Math.max(0, Math.floor(cameraX / barrierSpacing) - 1);
+      const lastBarrier = Math.floor((cameraX + width) / barrierSpacing);
+      const firstLane = Math.floor(cameraY / barrierLaneSpacing) - 1;
+      const lastLane = Math.ceil((cameraY + height) / barrierLaneSpacing) + 1;
+      for (let column = firstBarrier; column <= lastBarrier; column += 1) {
+        const barrierX = (column + 1) * barrierSpacing;
+        const starInterval = difficulty === "hard" ? 1 : 3;
+        const hasStar = difficulty === "hard" || ((column % starInterval) + starInterval) % starInterval === 2;
+        const firstVerticalChunk = Math.floor(firstLane / 12) - 1;
+        const lastVerticalChunk = Math.floor(lastLane / 12) + 1;
+        if (hasStar) {
+          for (let verticalChunk = firstVerticalChunk; verticalChunk <= lastVerticalChunk; verticalChunk += 1) {
+            const gapStart = verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
+            const starCount = difficulty === "hard" ? 4 : 1;
+            for (let starIndex = 0; starIndex < starCount; starIndex += 1) {
+              const starId = `barrier-${column}-${verticalChunk}-${starIndex}`;
+              if (collectedStars.current.has(starId)) continue;
+              const starX = difficulty === "hard" ? barrierX - 240 + starIndex * 34 : barrierX - 42;
+              const starY = difficulty === "hard"
+                ? (gapStart + 1) * barrierLaneSpacing
+                : (gapStart + 1) * barrierLaneSpacing + 48 + (tileRandom(column, verticalChunk, 73) > 0.5 ? 23 : -23);
+              if (starX > current.x + 24) {
+                drawStar(starX - cameraX, starY - cameraY, Math.sin(now / 240 + column + verticalChunk + starIndex) * 0.18);
+              }
+            }
+          }
+        }
+        for (let lane = firstLane; lane <= lastLane; lane += 1) {
+          const verticalChunk = Math.floor(lane / 12);
+          const gapStart = verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
+          if (lane === gapStart || lane === gapStart + 1) continue;
+          const boneY = lane * barrierLaneSpacing + barrierLaneSpacing / 2;
+          const rotation = (tileRandom(column, lane, 51) - 0.5) * 0.48;
+          drawBone(barrierX - cameraX, boneY - cameraY, rotation, 1.02, "#f2e5c4");
+        }
+      }
+
+      const direction = current.angle;
+      drawPlayer(playerScreenX, height / 2 + Math.sin(now / 170) * 1.5, direction);
+    }
+
+    function frameLoop(now: number) {
+      const delta = Math.min((now - lastFrame) / 1000, 0.04);
+      lastFrame = now;
+      const directions = heldDirections.current;
+      const horizontal = Number(directions.has("right")) - Number(directions.has("left"));
+      const vertical = Number(directions.has("down")) - Number(directions.has("up"));
+      const velocityX = (difficulty === "hard" ? 420 : 280) + horizontal * (difficulty === "hard" ? 140 : 110);
+      const velocityY = vertical * (difficulty === "hard" ? 280 : 250);
+      const magnitude = Math.hypot(velocityX, velocityY);
+      const speedLimit = difficulty === "hard" ? 540 : 360;
+      const scale = magnitude > speedLimit ? speedLimit / magnitude : 1;
+      player.current.x += velocityX * scale * delta;
+      player.current.y += velocityY * scale * delta;
+      player.current.angle = Math.atan2(velocityY * scale, velocityX * scale) + Math.PI / 2;
+
+      let collision = false;
+      let foundStar = false;
+      const nearbyBarrier = Math.floor(player.current.x / barrierSpacing);
+      for (let column = Math.max(0, nearbyBarrier - 1); column <= nearbyBarrier + 1 && !collision; column += 1) {
+        const barrierX = (column + 1) * barrierSpacing;
+        const lane = Math.floor(player.current.y / barrierLaneSpacing);
+        for (let nearbyLane = lane - 1; nearbyLane <= lane + 1; nearbyLane += 1) {
+          const verticalChunk = Math.floor(nearbyLane / 12);
+          const gapStart = verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
+          if (nearbyLane === gapStart || nearbyLane === gapStart + 1) continue;
+          const boneY = nearbyLane * barrierLaneSpacing + barrierLaneSpacing / 2;
+          if (Math.abs(player.current.x - barrierX) < 33 && Math.abs(player.current.y - boneY) < 25) {
+            collision = true;
+            break;
+          }
+        }
+      }
+
+      if (difficulty === "hard" && !collision) {
+        const tileSize = 360;
+        const tileX = Math.floor(player.current.x / tileSize);
+        const tileY = Math.floor(player.current.y / tileSize);
+        for (let tx = tileX - 1; tx <= tileX + 1 && !collision; tx += 1) {
+          for (let ty = tileY - 1; ty <= tileY + 1 && !collision; ty += 1) {
+            for (let item = 4; item < 7; item += 1) {
+              const randomX = tileRandom(tx, ty, item * 3 + 1);
+              const randomY = tileRandom(tx, ty, item * 3 + 2);
+              const boneX = tx * tileSize + 28 + randomX * (tileSize - 56);
+              const boneY = ty * tileSize + 28 + randomY * (tileSize - 56);
+              if (Math.hypot(player.current.x - boneX, player.current.y - boneY) < playerRadius + 14) {
+                collision = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      const currentVerticalChunk = Math.floor(player.current.y / (12 * barrierLaneSpacing));
+      for (let column = Math.max(0, nearbyBarrier - 1); column <= nearbyBarrier + 1; column += 1) {
+        const starInterval = difficulty === "hard" ? 1 : 3;
+        if (difficulty !== "hard" && ((column % starInterval) + starInterval) % starInterval !== 2) continue;
+        for (let verticalChunk = currentVerticalChunk - 1; verticalChunk <= currentVerticalChunk + 1; verticalChunk += 1) {
+          const gapStart = verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
+          const starCount = difficulty === "hard" ? 4 : 1;
+          for (let starIndex = 0; starIndex < starCount; starIndex += 1) {
+            const starId = `barrier-${column}-${verticalChunk}-${starIndex}`;
+            if (collectedStars.current.has(starId)) continue;
+            const barrierX = (column + 1) * barrierSpacing;
+            const starX = difficulty === "hard" ? barrierX - 240 + starIndex * 34 : barrierX - 42;
+            const starY = difficulty === "hard"
+              ? (gapStart + 1) * barrierLaneSpacing
+              : (gapStart + 1) * barrierLaneSpacing + 48 + (tileRandom(column, verticalChunk, 73) > 0.5 ? 23 : -23);
+            if (starX > player.current.x && Math.hypot(player.current.x - starX, player.current.y - starY) < playerRadius + 14) {
+              collectedStars.current.add(starId);
+              collectedStarCount.current += 1;
+              foundStar = true;
+            }
+          }
+        }
+      }
+      if (foundStar) {
+        setStarsCollected(collectedStarCount.current);
+        collectStarRef.current();
+      }
+      drawMap(now);
+      if (collision) {
+        heldDirections.current.clear();
+        setActive(false);
+        setDead(true);
+        setDistance(Math.floor((now - runStart.current) / 1000));
+        return;
+      }
+      if (now - lastHudUpdate > 200) {
+        setDistance(Math.floor((now - runStart.current) / 1000));
+        lastHudUpdate = now;
+      }
+      frame = window.requestAnimationFrame(frameLoop);
+    }
+
+    if (active) frame = window.requestAnimationFrame(frameLoop);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [active, difficulty]);
+
+  useEffect(() => {
+    const keyboardDirections: Record<string, string> = {
+      ArrowUp: "up", KeyW: "up",
+      ArrowDown: "down", KeyS: "down",
+      ArrowLeft: "left", KeyA: "left",
+      ArrowRight: "right", KeyD: "right",
+    };
+    function onKeyDown(event: KeyboardEvent) {
+      const direction = keyboardDirections[event.code];
+      if (direction && active) {
+        event.preventDefault();
+        heldDirections.current.add(direction);
+      }
+    }
+    function onKeyUp(event: KeyboardEvent) {
+      const direction = keyboardDirections[event.code];
+      if (direction) heldDirections.current.delete(direction);
+    }
+    function onBlur() {
+      heldDirections.current.clear();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [active]);
+
+  function useAnotherLife() {
+    if (onSpendXp(10)) startRun();
+  }
+
+  function startFirstLife() {
+    if (onSpendXp(10)) startRun();
+  }
+
+  function setDirection(direction: string, isDown: boolean) {
+    if (isDown) heldDirections.current.add(direction);
+    else heldDirections.current.delete(direction);
+  }
+
+  return (
+    <main className="bone-field-page">
+      <header className="game-topbar">
+        <button className="lesson-back" type="button" onClick={onExit}>← Dashboard</button>
+        <BoneLogo />
+        <div className="game-xp-pill">{xp} XP</div>
+      </header>
+      <section className="game-shell">
+        <div className="game-heading">
+          <span className="eyebrow">THE BONEYARD</span>
+          <h1>Bone Bonanza</h1>
+          <p>{difficulty === "hard" ? "Hard run: scattered bones, tighter dodges, faster Benny." : "Keep moving east through the field. Dodge the bones for as long as you can."}</p>
+        </div>
+        <div className={`bone-map-wrap ${active ? "map-running" : ""}`}>
+          <canvas ref={canvasRef} className="bone-map-canvas" aria-label="Top-down map with Benny surrounded by scattered bones" />
+          <div className="game-hud">
+            <span className="game-score">TIME <strong>{distance}s</strong></span>
+            <span className="game-stars">★ <strong>{starsCollected}</strong> · +1 XP EACH</span>
+            <span className="map-direction-hint">AUTO-RUN → · STEER WITH WASD OR ARROWS</span>
+          </div>
+          {!active && !dead && (
+            <div className="game-overlay">
+              <span className="game-overlay-icon">✿</span>
+              <h2>Choose your boneyard</h2>
+              <p>Both runs cost 10 XP to enter. Stars are worth 1 XP.</p>
+              <div className="difficulty-options">
+                <button className={`difficulty-option ${difficulty === "easy" ? "selected" : ""}`} type="button" aria-pressed={difficulty === "easy"} onClick={() => setDifficulty("easy")}>
+                  <strong>Easy</strong><small>Bone rows · steady speed</small>
+                </button>
+                <button className={`difficulty-option ${difficulty === "hard" ? "selected" : ""}`} type="button" aria-pressed={difficulty === "hard"} onClick={() => setDifficulty("hard")}>
+                  <strong>Hard</strong><small>Random bones · faster Benny</small>
+                </button>
+              </div>
+              <button className="game-start-button" type="button" disabled={xp < 10} onClick={startFirstLife}>
+                {xp >= 10 ? `Start ${difficulty} · 10 XP` : "Need 10 XP to play"} <span>→</span>
+              </button>
+              <small>Auto-run to the right · use ↑ ↓ ← → or WASD to steer</small>
+              <button className="recovery-quiz-button" type="button" onClick={() => setShowRecoveryQuiz(true)}>
+                Take a quick bone quiz for XP
+              </button>
+            </div>
+          )}
+          {dead && (
+            <div className="game-overlay death-overlay" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
+              <span className="game-overlay-icon">🦴</span>
+              <h2 id="game-over-title">Bone collision!</h2>
+              <p>You survived for {distance} seconds on {difficulty}. Spend 10 XP for another life, or save your XP for later.</p>
+              <div className="game-death-actions">
+                {xp >= 10 && <button className="game-start-button" type="button" onClick={useAnotherLife}>Use another life · 10 XP</button>}
+                <button className="game-save-button" type="button" onClick={onExit}>Save my XP &amp; head home</button>
+              </div>
+              {xp < 10 && (
+                <>
+                  <small>You need 10 XP to play another life. Save up and come back!</small>
+                  <button className="recovery-quiz-button" type="button" onClick={() => setShowRecoveryQuiz(true)}>
+                    Take a quick bone quiz for XP
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+          {showRecoveryQuiz && (
+            <RecoveryQuiz
+              onEarnXp={onEarnQuizXp}
+              onClose={() => setShowRecoveryQuiz(false)}
+            />
+          )}
+        </div>
+        {active && (
+          <div className="field-controls" aria-label="Touch movement controls">
+            <button type="button" className="field-control up" aria-label="Move up" onPointerDown={(event) => { event.preventDefault(); setDirection("up", true); }} onPointerUp={() => setDirection("up", false)} onPointerLeave={() => setDirection("up", false)} onPointerCancel={() => setDirection("up", false)}>↑</button>
+            <button type="button" className="field-control left" aria-label="Move left" onPointerDown={(event) => { event.preventDefault(); setDirection("left", true); }} onPointerUp={() => setDirection("left", false)} onPointerLeave={() => setDirection("left", false)} onPointerCancel={() => setDirection("left", false)}>←</button>
+            <button type="button" className="field-control down" aria-label="Move down" onPointerDown={(event) => { event.preventDefault(); setDirection("down", true); }} onPointerUp={() => setDirection("down", false)} onPointerLeave={() => setDirection("down", false)} onPointerCancel={() => setDirection("down", false)}>↓</button>
+            <button type="button" className="field-control right" aria-label="Move right" onPointerDown={(event) => { event.preventDefault(); setDirection("right", true); }} onPointerUp={() => setDirection("right", false)} onPointerLeave={() => setDirection("right", false)} onPointerCancel={() => setDirection("right", false)}>→</button>
+          </div>
+        )}
+        {!active && !dead && <button className="game-save-link" type="button" onClick={onExit}>Save XP and head home</button>}
+      </section>
+    </main>
+  );
+}
+
+const recoveryQuestions = [
+  {
+    question: "Which bone protects your brain?",
+    options: ["Skull", "Femur", "Tibia"],
+    answer: 0,
+  },
+  {
+    question: "What do your ribs help protect?",
+    options: ["Your brain", "Your heart and lungs", "Your knees"],
+    answer: 1,
+  },
+  {
+    question: "Which is the longest, strongest bone in your body?",
+    options: ["Patella", "Humerus", "Femur"],
+    answer: 2,
+  },
+];
+
+function RecoveryQuiz({ onEarnXp, onClose }: { onEarnXp: (amount: number) => void; onClose: () => void }) {
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [earnedXp, setEarnedXp] = useState(0);
+  const question = recoveryQuestions[questionIndex];
+  const finished = questionIndex === recoveryQuestions.length;
+
+  function chooseAnswer(index: number) {
+    if (selected !== null) return;
+    setSelected(index);
+    if (index === question.answer) {
+      setCorrectCount((count) => count + 1);
+      setEarnedXp((total) => total + 5);
+      onEarnXp(5);
+    }
+  }
+
+  function nextQuestion() {
+    setSelected(null);
+    setQuestionIndex((index) => index + 1);
+  }
+
+  return (
+    <div className="game-overlay recovery-quiz-overlay" role="dialog" aria-modal="true" aria-labelledby="recovery-quiz-title">
+      {finished ? (
+        <>
+          <span className="game-overlay-icon">✦</span>
+          <h2 id="recovery-quiz-title">Bone-rilliant!</h2>
+          <p>You got {correctCount} of {recoveryQuestions.length} right and earned {earnedXp} XP.</p>
+          <button className="game-start-button" type="button" onClick={onClose}>Back to the boneyard</button>
+        </>
+      ) : (
+        <>
+          <span className="eyebrow recovery-quiz-progress">LESSON 1 REFRESHER · {questionIndex + 1} OF {recoveryQuestions.length}</span>
+          <h2 id="recovery-quiz-title">{question.question}</h2>
+          <div className="recovery-quiz-options">
+            {question.options.map((option, index) => (
+              <button
+                type="button"
+                key={option}
+                className={`recovery-quiz-option ${selected === index ? (index === question.answer ? "correct" : "incorrect") : ""}`}
+                disabled={selected !== null}
+                onClick={() => chooseAnswer(index)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          {selected !== null && (
+            <div className="recovery-quiz-feedback" aria-live="polite">
+              <strong>{selected === question.answer ? "Correct! +5 XP" : "Not quite—keep learning!"}</strong>
+              <button className="game-start-button" type="button" onClick={nextQuestion}>
+                {questionIndex === recoveryQuestions.length - 1 ? "See my score" : "Next question"}
+              </button>
+            </div>
+          )}
+          <button className="recovery-quiz-cancel" type="button" onClick={onClose}>Return to the game</button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function DailyQuestion() {
   const dayNumber = Math.floor(Date.now() / 86_400_000);
   const question = dailyQuestions[dayNumber % dailyQuestions.length];
@@ -1302,6 +1878,9 @@ function Home({
   lesson1QuizCompleted,
   onLessonComplete,
   onLessonQuizComplete,
+  onSpendXp,
+  onCollectStar,
+  onEarnQuizXp,
   onSignOut,
 }: {
   profile: Profile;
@@ -1310,16 +1889,25 @@ function Home({
   lesson1QuizCompleted: boolean;
   onLessonComplete: () => void;
   onLessonQuizComplete: (earnedXp: number) => void;
+  onSpendXp: (amount: number) => boolean;
+  onCollectStar: () => void;
+  onEarnQuizXp: (amount: number) => void;
   onSignOut: () => void;
 }) {
   const [message, setMessage] = useState("Your bones are living tissue. That means they can fix themselves!");
   const [completedLessons, setCompletedLessons] = useState<number[]>([]);
   const [showLesson, setShowLesson] = useState(false);
+  const [showGame, setShowGame] = useState(false);
+
+  if (showGame) {
+    return <BoneBeatGame xp={xp} onSpendXp={onSpendXp} onCollectStar={onCollectStar} onEarnQuizXp={onEarnQuizXp} onExit={() => setShowGame(false)} />;
+  }
 
   if (showLesson) {
     return (
       <BoneLesson
         onBack={() => setShowLesson(false)}
+        onPlayGame={() => setShowGame(true)}
         xpAlreadyClaimed={lesson1QuizCompleted}
         onQuizComplete={onLessonQuizComplete}
         onComplete={() => {
@@ -1365,9 +1953,14 @@ function Home({
             <span className="eyebrow">GOOD TO SEE YOU!</span>
             <h1>Hey {profile.name}, ready to get bone-smart?</h1>
             <p>Pick up where you left off, or explore something new.</p>
-            <button className="dark-button" type="button" onClick={() => setShowLesson(true)}>
-              Keep learning <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
-            </button>
+            <div className="welcome-actions">
+              <button className="dark-button" type="button" onClick={() => setShowLesson(true)}>
+                Keep learning <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+              </button>
+              <button className="game-shortcut-button" type="button" onClick={() => setShowGame(true)}>
+                <span aria-hidden="true">🦴</span> Play Bone Bonanza
+              </button>
+            </div>
           </div>
           <div className="banner-mascot">
             <div className="mini-speech">You’ve got this!</div>
@@ -1524,6 +2117,25 @@ export default function App() {
           xp: (account.xp ?? 0) + earnedXp,
           lesson1QuizCompleted: true,
         };
+        saveAccount(updatedAccount, loadAccounts());
+        setAccount(updatedAccount);
+      }}
+      onSpendXp={(amount) => {
+        if (!account || amount <= 0 || (account.xp ?? 0) < amount) return false;
+        const updatedAccount = { ...account, xp: (account.xp ?? 0) - amount };
+        saveAccount(updatedAccount, loadAccounts());
+        setAccount(updatedAccount);
+        return true;
+      }}
+      onCollectStar={() => {
+        if (!account) return;
+        const updatedAccount = { ...account, xp: (account.xp ?? 0) + 1 };
+        saveAccount(updatedAccount, loadAccounts());
+        setAccount(updatedAccount);
+      }}
+      onEarnQuizXp={(earnedXp) => {
+        if (!account || earnedXp <= 0) return;
+        const updatedAccount = { ...account, xp: (account.xp ?? 0) + earnedXp };
         saveAccount(updatedAccount, loadAccounts());
         setAccount(updatedAccount);
       }}
