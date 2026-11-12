@@ -103,6 +103,7 @@ type Account = {
   xp?: number;
   lesson1QuizCompleted?: boolean;
   lesson2QuizCompleted?: boolean;
+  lesson2FinalQuizCompleted?: boolean;
 };
 
 const accountsKey = "bone-buddies-accounts";
@@ -543,16 +544,67 @@ function Questionnaire({
   );
 }
 
+type FractureType = "stable" | "displaced" | "oblique" | "transverse";
+
+function FractureXray({ type }: { type: FractureType }) {
+  const isDisplaced = type === "displaced";
+  const crackPath = type === "oblique"
+    ? "M178 239 198 250 189 263 215 276 205 290 237 305"
+    : "M178 256 193 248 207 260 222 251 240 258";
+
+  return (
+    <svg className="fracture-xray-art" viewBox="0 0 420 520" role="img" aria-label={`${type} fracture shown on a friendly X-ray illustration`}>
+      <defs>
+        <linearGradient id="xray-bone" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stopColor="#f4ffff" />
+          <stop offset=".5" stopColor="#b9f4f3" />
+          <stop offset="1" stopColor="#72d4e5" />
+        </linearGradient>
+        <filter id="xray-glow" x="-60%" y="-30%" width="220%" height="160%">
+          <feGaussianBlur stdDeviation="9" />
+        </filter>
+        <marker id="fracture-arrow" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto">
+          <path d="M0 0 10 5 0 10Z" fill="#ff9a72" />
+        </marker>
+      </defs>
+      <rect x="14" y="14" width="392" height="492" rx="34" fill="#123d68" />
+      <circle cx="210" cy="260" r="170" fill="#1b5681" opacity=".36" />
+      <path d="M95 155q48 34 0 68m230-68q-48 34 0 68M91 245q52 34 3 68m235-68q-52 34-3 68M100 335q42 27 9 54m211-54q-42 27-9 54" fill="none" stroke="#61b9d1" strokeWidth="9" strokeLinecap="round" opacity=".32" />
+      <path d="M180 48C155 38 139 55 145 77c4 16 22 22 35 31l10 130q20 10 40 0l10-130c13-9 31-15 35-31 6-22-10-39-35-29-12 5-21 20-30 20s-18-15-30-20Z" fill="#b9f4f3" opacity=".75" filter="url(#xray-glow)" />
+      <path d="M180 48C155 38 139 55 145 77c4 16 22 22 35 31l10 130q20 10 40 0l10-130c13-9 31-15 35-31 6-22-10-39-35-29-12 5-21 20-30 20s-18-15-30-20Z" fill="url(#xray-bone)" stroke="#efffff" strokeWidth="4" strokeLinejoin="round" />
+      <path
+        d="M190 278 180 408c-13 9-31 15-35 31-6 22 10 39 35 29 12-5 21-20 30-20s18 15 30 20c25 10 41-7 35-29-4-16-22-22-35-31l-10-130q-20-10-40 0Z"
+        transform={isDisplaced ? "translate(22 8)" : undefined}
+        fill="url(#xray-bone)"
+        stroke="#efffff"
+        strokeWidth="4"
+        strokeLinejoin="round"
+      />
+      <path d={crackPath} fill="none" stroke="#fff4dd" strokeWidth="13" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={crackPath} fill="none" stroke="#ff805f" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={`M332 154Q312 190 ${isDisplaced ? "238 275" : "218 258"}`} fill="none" stroke="#ff9a72" strokeWidth="4" strokeLinecap="round" markerEnd="url(#fracture-arrow)" />
+      <rect x="247" y="111" width="124" height="34" rx="17" fill="#fff4dd" />
+      <text x="309" y="133" textAnchor="middle" fill="#17476d" fontSize="13" fontWeight="800" letterSpacing=".4">CRACK HERE</text>
+      <text x="42" y="474" fill="#b9e8f4" fontSize="13" fontWeight="700" letterSpacing="1.4">BONE X-RAY</text>
+      <circle cx="366" cy="467" r="5" fill="#ff9a72" />
+    </svg>
+  );
+}
+
 const fractureSlides: {
   eyebrow: string;
   title: string;
   icon: string;
+  fractureType?: FractureType;
   term?: string;
   pronunciation?: string;
   paragraphs?: string[];
   terms?: string[];
   points: string[];
   note?: string;
+  question: string;
+  options: string[];
+  answer: number;
 }[] = [
   {
     eyebrow: "BONES CAN GET HURT",
@@ -560,6 +612,9 @@ const fractureSlides: {
     icon: "🦴",
     paragraphs: ["A very hard fall, hit, or twist can sometimes crack or break a bone."],
     points: ["A break can be a tiny crack or a bigger split.", "You cannot always see a broken bone from the outside."],
+    question: "Can a broken bone always be seen from the outside?",
+    options: ["Yes, every break is easy to see.", "No, some breaks cannot be seen from the outside.", "Only small cracks can be seen."],
+    answer: 1,
   },
   {
     eyebrow: "TWO WORDS, ONE MEANING",
@@ -569,26 +624,72 @@ const fractureSlides: {
     pronunciation: "FRAK-cher",
     paragraphs: ["Fracture is the grown-up, medical word for a broken bone. They mean the same thing."],
     points: ["A small crack is still a fracture.", "A big break is also a fracture."],
+    question: "What does “fracture” mean?",
+    options: ["A broken bone.", "A bruise on the skin.", "A bone that is fully healed."],
+    answer: 0,
   },
   {
-    eyebrow: "HOW THE BONE ENDS LINE UP",
-    title: "Some breaks stay lined up",
+    eyebrow: "FRACTURE TYPE · ALIGNMENT",
+    title: "A stable fracture stays lined up",
     icon: "🧩",
-    points: [
-      "Stable (STAY-bul): the broken ends of the bone are still lined up.",
-      "Displaced (dis-PLAYST): the broken ends have moved out of line.",
-    ],
+    fractureType: "stable",
+    term: "Stable",
+    pronunciation: "STAY-bul",
+    paragraphs: ["The broken ends of the bone are still lined up."],
+    points: ["The pieces have not moved far out of place.", "A doctor checks the bone and decides what care it needs."],
     note: "A doctor checks the bone and decides what care it needs. Never try to move a hurt bone back into place.",
+    question: "In a stable fracture, how are the broken ends lined up?",
+    options: ["They are still lined up.", "They have moved far apart.", "The crack goes diagonally."],
+    answer: 0,
   },
   {
-    eyebrow: "THE DIRECTION OF THE CRACK",
-    title: "Cracks can go different ways",
+    eyebrow: "FRACTURE TYPE · ALIGNMENT",
+    title: "A displaced fracture moves out of line",
+    icon: "🧩",
+    fractureType: "displaced",
+    term: "Displaced",
+    pronunciation: "dis-PLAYST",
+    paragraphs: ["The broken ends of the bone have moved out of their usual line."],
+    points: ["A health professional checks the injury and decides what care it needs.", "Never try to move a hurt bone back into place."],
+    question: "What happens in a displaced fracture?",
+    options: ["The broken ends stay lined up.", "The broken ends move out of line.", "The crack goes straight across."],
+    answer: 1,
+  },
+  {
+    eyebrow: "FRACTURE TYPE · CRACK DIRECTION",
+    title: "An oblique fracture slants",
     icon: "〰️",
-    points: [
-      "Transverse (trans-VURSS): the crack goes straight across the bone.",
-      "Oblique (oh-BLEEK): the crack goes diagonally, like a slanted line.",
-    ],
-    note: "These words describe different things: stable or displaced tells how the bone ends line up; transverse or oblique tells which way the crack goes. A fracture can fit one word from each pair.",
+    fractureType: "oblique",
+    term: "Oblique",
+    pronunciation: "oh-BLEEK",
+    paragraphs: ["The crack goes diagonally across the bone, like a slanted line."],
+    points: ["Oblique describes the direction of the crack.", "The bone can also be stable or displaced."],
+    question: "Which way does an oblique fracture go?",
+    options: ["Straight across the bone.", "Diagonally, like a slanted line.", "Around the bone in a circle."],
+    answer: 1,
+  },
+  {
+    eyebrow: "FRACTURE TYPE · CRACK DIRECTION",
+    title: "A transverse fracture goes across",
+    icon: "➖",
+    fractureType: "transverse",
+    term: "Transverse",
+    pronunciation: "trans-VURSS",
+    paragraphs: ["The crack goes straight across the bone, from one side to the other."],
+    points: ["Transverse describes the direction of the crack.", "The bone can also be stable or displaced."],
+    question: "Which way does a transverse fracture go?",
+    options: ["Straight across the bone.", "Diagonally across the bone.", "The broken ends move out of line."],
+    answer: 0,
+  },
+  {
+    eyebrow: "TWO WAYS TO DESCRIBE A FRACTURE",
+    title: "A fracture can have two descriptions",
+    icon: "🧠",
+    paragraphs: ["Stable or displaced tells how the broken ends line up. Oblique or transverse tells which way the crack goes."],
+    points: ["A fracture can fit one word from each pair.", "For example, a fracture can be stable and transverse."],
+    question: "Which words describe the direction of a crack?",
+    options: ["Stable and displaced.", "Oblique and transverse.", "Bruise and swelling."],
+    answer: 1,
   },
   {
     eyebrow: "WHAT MIGHT HAPPEN",
@@ -596,6 +697,9 @@ const fractureSlides: {
     icon: "🔎",
     paragraphs: ["The hurt spot might ache or hurt more when you try to move it. Sometimes the bone does not look different."],
     points: ["A doctor or nurse is the one who can tell if a bone is broken.", "They may use a special picture called an X-ray (EKS-ray)."],
+    question: "Who can tell if a bone is broken?",
+    options: ["A doctor or nurse.", "Only a friend.", "You can always tell by looking."],
+    answer: 0,
   },
   {
     eyebrow: "WARNING SIGNS",
@@ -604,6 +708,9 @@ const fractureSlides: {
     terms: ["Swelling (SWELL-ing) means a part gets puffy.", "A bruise (BROOZ) is a colored mark on your skin."],
     points: ["Strong pain, puffiness, or a bruise.", "The arm or leg looks an unusual shape.", "It is hard to move or use that part.", "Tingling or numbness (NUHM-niss), or fingers or toes that look blue or feel cold."],
     note: "These are warning signs for both a break and a fracture. Other hurts can cause them too, so a grown-up and a health professional can help figure it out.",
+    question: "Which could be a warning sign of a broken bone?",
+    options: ["Strong pain and swelling.", "Feeling hungry.", "A runny nose."],
+    answer: 0,
   },
   {
     eyebrow: "GET HELP",
@@ -611,33 +718,56 @@ const fractureSlides: {
     icon: "🛟",
     paragraphs: ["Stop playing and keep the hurt part still. Ask a grown-up for help—do not push, poke, or try to straighten it."],
     points: ["Get emergency help right away if a bone is showing, there is a lot of bleeding, or fingers or toes turn blue, cold, or numb.", "If you are not with a grown-up, call your local emergency number."],
-  },
-];
-
-const fractureQuestions = [
-  {
-    question: "Do “broken bone” and “fracture” mean different things?",
-    options: ["Yes, they are different injuries.", "No, they mean the same thing.", "A fracture is a bruise."],
-    answer: 1,
-  },
-  {
-    question: "Which could be a warning sign of a broken bone?",
-    options: ["Strong pain and swelling.", "Feeling hungry.", "A runny nose."],
-    answer: 0,
-  },
-  {
     question: "What should you do if you think you broke a bone?",
     options: ["Try to straighten it yourself.", "Keep playing and ignore it.", "Keep it still and tell a grown-up."],
     answer: 2,
   },
+];
+
+const fractureFinalQuestions = [
   {
-    question: "What does “stable fracture” mean?",
-    options: ["The broken ends are still lined up.", "The bone has healed already.", "The crack goes diagonally."],
+    question: "An X-ray shows a tiny crack in a bone. Does it count as a fracture?",
+    options: ["Yes, a small crack is still a fracture.", "No, only a bone split in two is a fracture.", "No, a crack is the same as a bruise."],
     answer: 0,
   },
   {
-    question: "Which crack goes diagonally across a bone?",
-    options: ["A transverse fracture.", "An oblique fracture.", "A stable fracture."],
+    question: "After a break, the bone pieces are still in their usual line. Which word describes this?",
+    options: ["Stable.", "Displaced.", "Oblique."],
+    answer: 0,
+  },
+  {
+    question: "A picture shows the broken bone pieces shifted away from their usual line. Which word fits?",
+    options: ["Transverse.", "Displaced.", "Stable."],
+    answer: 1,
+  },
+  {
+    question: "Kai's X-ray shows a crack that slants across the bone. Which word describes the crack's direction?",
+    options: ["Oblique.", "Stable.", "Displaced."],
+    answer: 0,
+  },
+  {
+    question: "A crack runs straight from one side of the bone to the other. What is its direction called?",
+    options: ["Displaced.", "Oblique.", "Transverse."],
+    answer: 2,
+  },
+  {
+    question: "An X-ray shows a straight-across crack, and the bone pieces stay lined up. Which pair describes it?",
+    options: ["Stable and transverse.", "Displaced and oblique.", "Stable and oblique."],
+    answer: 0,
+  },
+  {
+    question: "A health professional wants to check whether a bone has a crack. What might they use?",
+    options: ["An X-ray picture.", "A hearing test.", "A thermometer only."],
+    answer: 0,
+  },
+  {
+    question: "A teammate has a badly hurt arm. Someone suggests pulling it straight. What should you do?",
+    options: ["Keep it still and get a grown-up; don't try to straighten it.", "Pull it gently until it looks straight.", "Ask them to move it around to test it."],
+    answer: 0,
+  },
+  {
+    question: "Which injury needs emergency help right away?",
+    options: ["A small bruise with no other symptoms.", "A bone showing through the skin or fingers turning blue and cold.", "A sore spot that feels better after resting."],
     answer: 1,
   },
 ];
@@ -646,42 +776,66 @@ function FractureLesson({
   onBack,
   onComplete,
   onQuizComplete,
-  xpAlreadyClaimed,
+  finalQuizXpAlreadyClaimed,
 }: {
   onBack: () => void;
   onComplete: () => void;
   onQuizComplete: (earnedXp: number) => void;
-  xpAlreadyClaimed: boolean;
+  finalQuizXpAlreadyClaimed: boolean;
 }) {
-  const [phase, setPhase] = useState<"learn" | "quiz" | "finished">("learn");
+  const [phase, setPhase] = useState<"learn" | "quick-check" | "final-quiz" | "finished">("learn");
   const [slide, setSlide] = useState(0);
-  const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [correctCount, setCorrectCount] = useState(0);
+  const [finalQuizIndex, setFinalQuizIndex] = useState(0);
+  const [finalQuizCorrectCount, setFinalQuizCorrectCount] = useState(0);
   const [earnedXp, setEarnedXp] = useState(0);
-  const [xpWasAlreadyClaimed] = useState(xpAlreadyClaimed);
+  const [xpWasAlreadyClaimed] = useState(finalQuizXpAlreadyClaimed);
   const currentSlide = fractureSlides[slide];
-  const currentQuestion = fractureQuestions[questionIndex];
+  const currentFinalQuestion = fractureFinalQuestions[finalQuizIndex];
 
-  function answerQuestion(index: number) {
+  function answerQuickCheck(index: number) {
     if (selectedAnswer !== null) return;
     setSelectedAnswer(index);
-    if (index === currentQuestion.answer) setCorrectCount((count) => count + 1);
   }
 
-  function advanceQuiz() {
-    if (selectedAnswer !== currentQuestion.answer) {
+  function answerFinalQuestion(index: number) {
+    if (selectedAnswer !== null) return;
+    setSelectedAnswer(index);
+    if (index === currentFinalQuestion.answer) {
+      setFinalQuizCorrectCount((count) => count + 1);
+    }
+  }
+
+  function advanceQuickCheck() {
+    if (selectedAnswer !== currentSlide.answer) {
       setSelectedAnswer(null);
       return;
     }
-    if (questionIndex === fractureQuestions.length - 1) {
-      const earned = xpWasAlreadyClaimed ? 0 : correctCount * 10;
+    if (slide === fractureSlides.length - 1) {
+      setFinalQuizIndex(0);
+      setFinalQuizCorrectCount(0);
+      setSelectedAnswer(null);
+      setPhase("final-quiz");
+      return;
+    }
+    setSlide((index) => index + 1);
+    setSelectedAnswer(null);
+    setPhase("learn");
+  }
+
+  function advanceFinalQuiz() {
+    if (selectedAnswer !== currentFinalQuestion.answer) {
+      setSelectedAnswer(null);
+      return;
+    }
+    if (finalQuizIndex === fractureFinalQuestions.length - 1) {
+      const earned = xpWasAlreadyClaimed ? 0 : finalQuizCorrectCount * 10;
       setEarnedXp(earned);
       onQuizComplete(earned);
       setPhase("finished");
       return;
     }
-    setQuestionIndex((index) => index + 1);
+    setFinalQuizIndex((index) => index + 1);
     setSelectedAnswer(null);
   }
 
@@ -697,12 +851,12 @@ function FractureLesson({
           <span className="finish-badge" aria-hidden="true">🎉</span>
           <span className="eyebrow">BONE-RILLIANT WORK!</span>
           <h1>You know your breaks!</h1>
-          <p>You got {correctCount} out of {fractureQuestions.length} questions right. Remember: a break and a fracture are the same thing. Tell a grown-up if you think someone is hurt.</p>
+          <p>You got {finalQuizCorrectCount} out of {fractureFinalQuestions.length} final quiz questions right. Remember: a break and a fracture are the same thing. Tell a grown-up if you think someone is hurt.</p>
           <div className="lesson-results-stats">
-            <div><strong>{correctCount}/{fractureQuestions.length}</strong><span>correct answers</span></div>
+            <div><strong>{finalQuizCorrectCount}/{fractureFinalQuestions.length}</strong><span>final quiz correct</span></div>
             <div><strong>+{earnedXp} XP</strong><span>{xpWasAlreadyClaimed ? "already collected" : "added to your account"}</span></div>
           </div>
-          <p className="lesson-xp-note">{xpWasAlreadyClaimed ? "You’ve already collected XP for this quiz. Replay to practice!" : "You earned 10 XP for each correct answer!"}</p>
+          <p className="lesson-xp-note">{xpWasAlreadyClaimed ? "You’ve already collected XP for this quiz. Replay to practice!" : "You earned 10 XP for each correct final quiz answer!"}</p>
           <div className="lesson-finish-actions">
             <button className="primary-button" type="button" onClick={onComplete}>Back to my lessons</button>
           </div>
@@ -725,17 +879,24 @@ function FractureLesson({
               <div className="bone-progress-label"><span>BREAKS & FRACTURES</span><strong>{slide + 1} of {fractureSlides.length}</strong></div>
               <div className="bone-progress-track"><span style={{ width: `${((slide + 1) / fractureSlides.length) * 100}%` }} /></div>
             </div>
+          ) : phase === "quick-check" ? (
+            <div className="learning-progress">
+              <div className="bone-progress-label"><span>QUICK CHECK</span><strong>{slide + 1} of {fractureSlides.length}</strong></div>
+              <div className="bone-progress-track"><span style={{ width: `${((slide + 1) / fractureSlides.length) * 100}%` }} /></div>
+            </div>
           ) : (
             <div className="learning-progress">
-              <div className="bone-progress-label"><span>QUICK CHECK · {correctCount} CORRECT · {xpWasAlreadyClaimed ? "XP ALREADY EARNED" : `${correctCount * 10} XP`}</span><strong>{questionIndex + 1} of {fractureQuestions.length}</strong></div>
-              <div className="bone-progress-track"><span style={{ width: `${((questionIndex + 1) / fractureQuestions.length) * 100}%` }} /></div>
+              <div className="bone-progress-label"><span>FINAL QUIZ · {finalQuizCorrectCount} CORRECT · {xpWasAlreadyClaimed ? "XP ALREADY EARNED" : `${finalQuizCorrectCount * 10} XP`}</span><strong>{finalQuizIndex + 1} of {fractureFinalQuestions.length}</strong></div>
+              <div className="bone-progress-track"><span style={{ width: `${((finalQuizIndex + 1) / fractureFinalQuestions.length) * 100}%` }} /></div>
             </div>
           )}
         </div>
 
         {phase === "learn" ? (
           <section className="fracture-card">
-            <div className="fracture-illustration" aria-hidden="true">{currentSlide.icon}</div>
+            <div className={`fracture-illustration ${currentSlide.fractureType ? "fracture-illustration-xray" : ""}`}>
+              {currentSlide.fractureType ? <FractureXray type={currentSlide.fractureType} /> : <span aria-hidden="true">{currentSlide.icon}</span>}
+            </div>
             <div className="fracture-slide-copy">
               <span className="eyebrow">{currentSlide.eyebrow}</span>
               <h1>{currentSlide.title}</h1>
@@ -753,39 +914,71 @@ function FractureLesson({
                 <button
                   className="primary-button"
                   type="button"
-                  onClick={() => slide === fractureSlides.length - 1 ? setPhase("quiz") : setSlide((index) => index + 1)}
+                  onClick={() => { setSelectedAnswer(null); setPhase("quick-check"); }}
                 >
-                  {slide === fractureSlides.length - 1 ? "Try the quick check" : "Next"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                  Quick check <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
                 </button>
               </div>
             </div>
           </section>
-        ) : (
+        ) : phase === "quick-check" ? (
           <section className="fracture-quiz-card">
-            <span className="eyebrow">QUESTION {questionIndex + 1}</span>
-            <h1>{currentQuestion.question}</h1>
+            <span className="eyebrow">QUICK CHECK · SLIDE {slide + 1}</span>
+            <h1>{currentSlide.question}</h1>
             <div className="fracture-quiz-options">
-              {currentQuestion.options.map((option, index) => (
+              {currentSlide.options.map((option, index) => (
                 <button
                   type="button"
-                  className={`fracture-quiz-option ${selectedAnswer === index ? (index === currentQuestion.answer ? "correct" : "incorrect") : ""}`}
+                  className={`fracture-quiz-option ${selectedAnswer === index ? (index === currentSlide.answer ? "correct" : "incorrect") : ""}`}
                   key={option}
                   disabled={selectedAnswer !== null}
-                  onClick={() => answerQuestion(index)}
+                  onClick={() => answerQuickCheck(index)}
                 >
                   {option}
                 </button>
               ))}
             </div>
             {selectedAnswer !== null && (
-              <p className={`fracture-quiz-feedback ${selectedAnswer === currentQuestion.answer ? "correct" : ""}`} aria-live="polite">
-                {selectedAnswer === currentQuestion.answer ? "That’s right! Nice remembering." : "Not quite. Let’s try that one again."}
+              <p className={`fracture-quiz-feedback ${selectedAnswer === currentSlide.answer ? "correct" : ""}`} aria-live="polite">
+                {selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Let’s try that one again."}
               </p>
             )}
             <div className="fracture-actions">
-              <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSlide(fractureSlides.length - 1); setQuestionIndex(0); setCorrectCount(0); setSelectedAnswer(null); }}>← Review lesson</button>
-              <button className="primary-button" type="button" disabled={selectedAnswer === null} onClick={advanceQuiz}>
-                {questionIndex === fractureQuestions.length - 1 ? "Finish lesson" : "Next question"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+              <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSelectedAnswer(null); }}>← Review slide</button>
+              <button className="primary-button" type="button" disabled={selectedAnswer === null} onClick={advanceQuickCheck}>
+                {selectedAnswer === currentSlide.answer && slide === fractureSlides.length - 1 ? "Start final quiz" : selectedAnswer === currentSlide.answer ? "Next slide" : "Try again"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+              </button>
+            </div>
+          </section>
+        ) : (
+          <section className="fracture-quiz-card">
+            <span className="eyebrow">FINAL QUIZ · QUESTION {finalQuizIndex + 1}</span>
+            <h1>{currentFinalQuestion.question}</h1>
+            <p className="review-xp-callout">
+              {xpWasAlreadyClaimed ? "You’ve already collected XP for this quiz. Replay to practice!" : "Earn 10 XP for every correct answer!"}
+            </p>
+            <div className="fracture-quiz-options">
+              {currentFinalQuestion.options.map((option, index) => (
+                <button
+                  type="button"
+                  className={`fracture-quiz-option ${selectedAnswer === index ? (index === currentFinalQuestion.answer ? "correct" : "incorrect") : ""}`}
+                  key={option}
+                  disabled={selectedAnswer !== null}
+                  onClick={() => answerFinalQuestion(index)}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+            {selectedAnswer !== null && (
+              <p className={`fracture-quiz-feedback ${selectedAnswer === currentFinalQuestion.answer ? "correct" : ""}`} aria-live="polite">
+                {selectedAnswer === currentFinalQuestion.answer ? "That’s right! Nice remembering." : "Not quite. Let’s try that one again."}
+              </p>
+            )}
+            <div className="fracture-actions">
+              <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSlide(fractureSlides.length - 1); setSelectedAnswer(null); }}>← Review lesson</button>
+              <button className="primary-button" type="button" disabled={selectedAnswer === null} onClick={advanceFinalQuiz}>
+                {selectedAnswer === currentFinalQuestion.answer && finalQuizIndex === fractureFinalQuestions.length - 1 ? "Finish lesson" : selectedAnswer === currentFinalQuestion.answer ? "Next question" : "Try again"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
               </button>
             </div>
           </section>
@@ -2129,7 +2322,7 @@ function Home({
   streak,
   xp,
   lesson1QuizCompleted,
-  lesson2QuizCompleted,
+  lesson2FinalQuizCompleted,
   onLessonComplete,
   onLessonQuizComplete,
   onLesson2QuizComplete,
@@ -2142,7 +2335,7 @@ function Home({
   streak: number;
   xp: number;
   lesson1QuizCompleted: boolean;
-  lesson2QuizCompleted: boolean;
+  lesson2FinalQuizCompleted: boolean;
   onLessonComplete: () => void;
   onLessonQuizComplete: (earnedXp: number) => void;
   onLesson2QuizComplete: (earnedXp: number) => void;
@@ -2182,7 +2375,7 @@ function Home({
     return (
       <FractureLesson
         onBack={() => setActiveLesson(null)}
-        xpAlreadyClaimed={lesson2QuizCompleted}
+        finalQuizXpAlreadyClaimed={lesson2FinalQuizCompleted}
         onQuizComplete={onLesson2QuizComplete}
         onComplete={() => {
           if (!completedLessons.includes(1)) {
@@ -2383,7 +2576,7 @@ export default function App() {
       streak={streakData.count}
       xp={account?.xp ?? 0}
       lesson1QuizCompleted={account?.lesson1QuizCompleted ?? false}
-      lesson2QuizCompleted={account?.lesson2QuizCompleted ?? false}
+      lesson2FinalQuizCompleted={account?.lesson2FinalQuizCompleted ?? false}
       onLessonComplete={completeLesson}
       onLessonQuizComplete={(earnedXp) => {
         if (!account || account.lesson1QuizCompleted) return;
@@ -2396,11 +2589,12 @@ export default function App() {
         setAccount(updatedAccount);
       }}
       onLesson2QuizComplete={(earnedXp) => {
-        if (!account || account.lesson2QuizCompleted) return;
+        if (!account || account.lesson2FinalQuizCompleted) return;
         const updatedAccount = {
           ...account,
           xp: (account.xp ?? 0) + earnedXp,
           lesson2QuizCompleted: true,
+          lesson2FinalQuizCompleted: true,
         };
         saveAccount(updatedAccount, loadAccounts());
         setAccount(updatedAccount);
