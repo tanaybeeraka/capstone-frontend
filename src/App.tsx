@@ -100,6 +100,7 @@ type Account = {
   email: string;
   password: string;
   profile?: Profile;
+  onboardingCompleted?: boolean;
   xp?: number;
   lesson1QuizCompleted?: boolean;
   lesson2QuizCompleted?: boolean;
@@ -111,6 +112,18 @@ const accountsKey = "bone-buddies-accounts";
 function loadAccounts(): Record<string, Account> {
   const saved = window.localStorage.getItem(accountsKey);
   return saved ? JSON.parse(saved) : {};
+}
+
+function hasCompletedOnboarding(account: Account) {
+  // Accounts created before this flag existed count as onboarded if they have a profile or any progress.
+  return Boolean(
+    account.onboardingCompleted ||
+      account.profile ||
+      account.xp ||
+      account.lesson1QuizCompleted ||
+      account.lesson2QuizCompleted ||
+      account.lesson2FinalQuizCompleted,
+  );
 }
 
 function saveAccount(account: Account, accounts: Record<string, Account>) {
@@ -2551,7 +2564,7 @@ export default function App() {
           setAccount(signedIn);
           setProfile(signedIn.profile ?? { ...initialProfile, name: signedIn.firstName });
           startFirstDay();
-          setScreen(isNew || !signedIn.profile ? "quiz" : "home");
+          setScreen(isNew || !hasCompletedOnboarding(signedIn) ? "quiz" : "home");
         }}
       />
     );
@@ -2563,7 +2576,11 @@ export default function App() {
         profile={profile}
         setProfile={setProfile}
         onDone={() => {
-          if (account) saveAccount({ ...account, profile }, loadAccounts());
+          if (account) {
+            const updatedAccount = { ...account, profile, onboardingCompleted: true };
+            saveAccount(updatedAccount, loadAccounts());
+            setAccount(updatedAccount);
+          }
           setScreen("home");
         }}
       />
