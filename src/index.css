@@ -352,7 +352,12 @@ aside { display: grid; align-content: start; gap: 18px; }
 .lesson-finish-card p { margin: 0 auto 25px; max-width: 390px; color: #536e82; line-height: 1.6; }
 .fracture-lesson-wrap { width: min(calc(100% - 32px), 1260px); margin: 32px auto; }
 .fracture-card { display: grid; min-height: 700px; grid-template-columns: minmax(300px, .9fr) minmax(0, 1.1fr); overflow: hidden; border: 1px solid #d5e7f2; border-radius: 24px; background: white; box-shadow: 0 12px 32px #244a6310; }
-.fracture-illustration { display: grid; min-height: 700px; place-items: center; background-color: #f1f8ff; background-image: radial-gradient(#d6e8fa 1px, transparent 1px); background-size: 22px 22px; font-size: clamp(5rem, 11vw, 8rem); }
+.fracture-illustration { display: grid; min-height: 700px; place-items: center; background-color: #f1f8ff; background-image: radial-gradient(#d6e8fa 1px, transparent 1px); background-size: 22px 22px; }
+.fracture-slide-art { display: block; width: min(88%, 500px); height: auto; filter: drop-shadow(0 12px 18px #244a6312); }
+.fracture-slide-skeleton { display: block; width: min(80%, 390px); height: min(88%, 630px); object-fit: contain; border-radius: 14px; background: white; box-shadow: 0 12px 28px #244a6317; }
+.fracture-real-art { position: relative; width: min(82%, 460px); aspect-ratio: 1; overflow: hidden; border-radius: 18px; background: white; box-shadow: 0 12px 28px #244a6317; }
+.fracture-real-art > img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.fracture-real-art-overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
 .fracture-illustration-xray { padding: clamp(20px, 3vw, 40px); background: radial-gradient(ellipse at center, #d6f4fb 0%, #bfe8f4 52%, #a9d8ed 100%); }
 .fracture-xray-art { display: block; width: min(100%, 500px); height: auto; filter: drop-shadow(0 14px 18px #17476d24); }
 .fracture-slide-copy { display: flex; flex-direction: column; align-items: flex-start; padding: clamp(40px, 5vw, 72px); }
@@ -371,6 +376,7 @@ aside { display: grid; align-content: start; gap: 18px; }
 .fracture-quiz-options { display: grid; gap: 11px; margin-top: 26px; }
 .fracture-quiz-option { min-height: 54px; padding: 12px 16px; border: 1.5px solid #d5e7f2; border-radius: 12px; background: #fbfdff; color: #34566d; font-weight: 700; text-align: left; cursor: pointer; }
 .fracture-quiz-option:hover:not(:disabled) { border-color: #32b697; background: #f4fcf9; }
+.fracture-quiz-option.selected:not(:disabled), .fracture-quiz-option.selected:hover:not(:disabled) { border-color: #75aeca; background: #e9f6fc; color: #18577d; }
 .fracture-quiz-option.correct { border-color: #32b697; background: #e9f8f2; color: #197c67; }
 .fracture-quiz-option.incorrect { border-color: #eea19a; background: #fff0ee; color: #9c542b; }
 .fracture-quiz-feedback { margin: 14px 0 0; color: #9c542b; font-size: .88rem; font-weight: 700; }
@@ -444,7 +450,7 @@ aside { display: grid; align-content: start; gap: 18px; }
 .welcome-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .game-shortcut-button { min-height: 46px; display: inline-flex; align-items: center; gap: 8px; padding: 0 17px; border: 2px solid var(--ink); border-radius: 13px; background: var(--paper); color: var(--ink); font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 color-mix(in oklch, var(--ink) 60%, black); transition: transform .18s; }
 .game-shortcut-button:hover { transform: translateY(-2px); }
-.game-shortcut-button span { font-size: 1.25rem; }
+.game-shortcut-bone { width: 24px; height: 24px; fill: currentColor; stroke: currentColor; stroke-width: 1; }
 .lesson-finish-actions { display: grid; justify-items: center; gap: 10px; }
 .lesson-finish-actions .primary-button { min-width: 210px; }
 .lesson-finish-actions .back-button { min-height: 40px; }
@@ -469,6 +475,8 @@ aside { display: grid; align-content: start; gap: 18px; }
 .map-direction-hint { color: #536347; }
 .game-overlay { position: absolute; z-index: 3; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: #34452cbf; text-align: center; backdrop-filter: blur(3px); }
 .game-overlay-icon { display: grid; width: 54px; height: 54px; place-items: center; border: 2px solid #f7e6a8; border-radius: 50% 46% 52% 42%; background: #fff2c9; color: #715c2c; font-size: 1.7rem; transform: rotate(-9deg); }
+.game-overlay-bone { width: 34px; height: 34px; fill: #715c2c; stroke: #715c2c; stroke-width: 1; }
+.game-overlay-icon > svg { width: 28px; height: 28px; }
 .game-overlay h2 { margin: 14px 0 6px; color: #fff8df; font: 600 clamp(1.5rem, 4vw, 2rem) "Fredoka", sans-serif; }
 .game-overlay p { max-width: 410px; margin: 0 0 17px; color: #f0edda; line-height: 1.55; }
 .difficulty-options { width: min(100%, 430px); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 0 16px; }
@@ -483,6 +491,7 @@ aside { display: grid; align-content: start; gap: 18px; }
 .game-overlay small { margin-top: 15px; color: #e8e5ce; font-size: .75rem; }
 .recovery-quiz-button { min-height: 42px; margin-top: 12px; padding: 0 16px; border: 1px solid #fff0b0; border-radius: 12px; background: #fff0b0; color: #40563b; font-weight: 900; cursor: pointer; }
 .recovery-quiz-button:hover { background: #ffe487; }
+.recovery-quiz-button:disabled { cursor: not-allowed; opacity: .65; }
 .recovery-quiz-overlay { z-index: 5; overflow-y: auto; }
 .recovery-quiz-overlay h2 { max-width: 460px; }
 .recovery-quiz-progress { margin-bottom: 5px; color: #fff0b0; }
