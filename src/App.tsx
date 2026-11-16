@@ -99,6 +99,11 @@ function Mascot({ small = false }: { small?: boolean }) {
   );
 }
 
+type LessonProgress = {
+  lessonIndex: 0 | 1;
+  slideIndex: number;
+};
+
 type Account = {
   firstName: string;
   lastName: string;
@@ -112,6 +117,7 @@ type Account = {
   lesson2QuizCompleted?: boolean;
   lesson2FinalQuizCompleted?: boolean;
   lesson2FinalQuizScoringCompleted?: boolean;
+  lessonProgress?: LessonProgress;
 };
 
 const accountsKey = "bone-buddies-accounts";
@@ -131,6 +137,19 @@ function hasCompletedOnboarding(account: Account) {
       account.lesson2QuizCompleted ||
       account.lesson2FinalQuizCompleted,
   );
+}
+
+function getLessonProgress(account: Account | null): LessonProgress | undefined {
+  const progress = account?.lessonProgress;
+  if (
+    !progress ||
+    (progress.lessonIndex !== 0 && progress.lessonIndex !== 1) ||
+    !Number.isInteger(progress.slideIndex) ||
+    progress.slideIndex < 0
+  ) {
+    return undefined;
+  }
+  return progress;
 }
 
 function saveAccount(account: Account, accounts: Record<string, Account>) {
@@ -889,14 +908,18 @@ function FractureLesson({
   onComplete,
   onQuizComplete,
   finalQuizXpAlreadyClaimed,
+  initialSlide,
+  onProgress,
 }: {
   onBack: () => void;
   onComplete: () => void;
   onQuizComplete: (earnedXp: number) => void;
   finalQuizXpAlreadyClaimed: boolean;
+  initialSlide: number;
+  onProgress: (progress: LessonProgress) => void;
 }) {
   const [phase, setPhase] = useState<"learn" | "quick-check" | "final-quiz" | "finished">("learn");
-  const [slide, setSlide] = useState(0);
+  const [slide, setSlide] = useState(() => Math.min(Math.max(initialSlide, 0), fractureSlides.length - 1));
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [finalQuizIndex, setFinalQuizIndex] = useState(0);
   const [finalQuizCorrectCount, setFinalQuizCorrectCount] = useState(0);
@@ -907,8 +930,19 @@ function FractureLesson({
   const [finalQuizFeedback, setFinalQuizFeedback] = useState("");
   const [earnedXp, setEarnedXp] = useState(0);
   const [xpWasAlreadyClaimed] = useState(finalQuizXpAlreadyClaimed);
+  const onProgressRef = useRef(onProgress);
+  onProgressRef.current = onProgress;
   const currentSlide = fractureSlides[slide];
   const currentFinalQuestion = fractureFinalQuestions[finalQuizIndex];
+
+  useEffect(() => {
+    onProgressRef.current({ lessonIndex: 1, slideIndex: slide });
+  }, [slide]);
+
+  function goToSlide(nextSlide: number) {
+    onProgressRef.current({ lessonIndex: 1, slideIndex: nextSlide });
+    setSlide(nextSlide);
+  }
 
   function answerQuickCheck(index: number) {
     if (selectedAnswer !== null) return;
@@ -937,7 +971,7 @@ function FractureLesson({
       setPhase("final-quiz");
       return;
     }
-    setSlide((index) => index + 1);
+    goToSlide(slide + 1);
     setSelectedAnswer(null);
     setPhase("learn");
   }
@@ -1076,7 +1110,7 @@ function FractureLesson({
               </ul>
               {currentSlide.note && <p className="fracture-note">{currentSlide.note}</p>}
               <div className="fracture-actions">
-                <button className="back-button" type="button" disabled={slide === 0} onClick={() => setSlide((index) => index - 1)}>← Back</button>
+                <button className="back-button" type="button" disabled={slide === 0} onClick={() => goToSlide(slide - 1)}>← Back</button>
                 <button
                   className="primary-button"
                   type="button"
@@ -1142,7 +1176,7 @@ function FractureLesson({
               </p>
             )}
             <div className="fracture-actions">
-              <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSlide(fractureSlides.length - 1); setSelectedAnswer(null); }}>← Review lesson</button>
+              <button className="back-button" type="button" onClick={() => { setPhase("learn"); goToSlide(fractureSlides.length - 1); setSelectedAnswer(null); }}>← Review lesson</button>
               <button className="primary-button" type="button" disabled={selectedAnswer === null && !answerRevealed} onClick={advanceFinalQuiz}>
                 {answerRevealed
                   ? "Continue"
@@ -1339,14 +1373,18 @@ function BoneLesson({
   onPlayGame,
   onQuizComplete,
   xpAlreadyClaimed,
+  initialSlide,
+  onProgress,
 }: {
   onBack: () => void;
   onComplete: () => void;
   onPlayGame: () => void;
   onQuizComplete: (earnedXp: number) => void;
   xpAlreadyClaimed: boolean;
+  initialSlide: number;
+  onProgress: (progress: LessonProgress) => void;
 }) {
-  const [slide, setSlide] = useState(0);
+  const [slide, setSlide] = useState(() => Math.min(Math.max(initialSlide, 0), bones.length - 1));
   const [phase, setPhase] = useState<"learn" | "question" | "practice" | "final-quiz" | "finished">("learn");
   const [placed, setPlaced] = useState<Set<string>>(() => new Set());
   const [selectedBone, setSelectedBone] = useState<string | null>(null);
@@ -1360,6 +1398,8 @@ function BoneLesson({
   const [reviewPassed, setReviewPassed] = useState(false);
   const [reviewCorrectCount, setReviewCorrectCount] = useState(0);
   const [reviewXp, setReviewXp] = useState(0);
+  const onProgressRef = useRef(onProgress);
+  onProgressRef.current = onProgress;
   const focus = bones[slide];
   const functionQuestion = boneFunctions[focus.id];
   const functionChoices = getFunctionChoices(focus, slide);
@@ -1370,6 +1410,15 @@ function BoneLesson({
   const allAvailableBonesPlaced = availableBones.every((bone) => placed.has(bone.id));
   const focusX = focus.imageX / 435.687;
   const focusY = focus.imageY / 841.89;
+
+  useEffect(() => {
+    onProgressRef.current({ lessonIndex: 0, slideIndex: slide });
+  }, [slide]);
+
+  function goToSlide(nextSlide: number) {
+    onProgressRef.current({ lessonIndex: 0, slideIndex: nextSlide });
+    setSlide(nextSlide);
+  }
 
   function placeBone(boneId: string, spotId: string) {
     const bone = bones.find((item) => item.id === boneId);
@@ -1436,7 +1485,7 @@ function BoneLesson({
       setPhase("final-quiz");
       return;
     }
-    setSlide(slide + 1);
+    goToSlide(slide + 1);
     setPlaced(new Set());
     setSelectedBone(null);
     setDraggedBone(null);
@@ -1448,7 +1497,7 @@ function BoneLesson({
   }
 
   function goToPreviousSlide() {
-    setSlide(slide - 1);
+    goToSlide(slide - 1);
     setPlaced(new Set());
     setSelectedBone(null);
     setDraggedBone(null);
@@ -2636,7 +2685,9 @@ function Home({
   xp,
   lesson1QuizCompleted,
   lesson2FinalQuizScoringCompleted,
+  lessonProgress,
   onLessonComplete,
+  onLessonProgress,
   onLessonQuizComplete,
   onLesson2QuizComplete,
   onSpendXp,
@@ -2649,7 +2700,9 @@ function Home({
   xp: number;
   lesson1QuizCompleted: boolean;
   lesson2FinalQuizScoringCompleted: boolean;
+  lessonProgress?: LessonProgress;
   onLessonComplete: () => void;
+  onLessonProgress: (progress: LessonProgress) => void;
   onLessonQuizComplete: (earnedXp: number) => void;
   onLesson2QuizComplete: (earnedXp: number) => void;
   onSpendXp: (amount: number) => boolean;
@@ -2661,6 +2714,7 @@ function Home({
   const [completedLessons, setCompletedLessons] = useState<number[]>([]);
   const [activeLesson, setActiveLesson] = useState<number | null>(null);
   const [showGame, setShowGame] = useState(false);
+  const [resumeProgress, setResumeProgress] = useState(false);
 
   if (showGame) {
     return (
@@ -2682,6 +2736,8 @@ function Home({
         onBack={() => setActiveLesson(null)}
         onPlayGame={() => setShowGame(true)}
         xpAlreadyClaimed={lesson1QuizCompleted}
+        initialSlide={resumeProgress && lessonProgress?.lessonIndex === 0 ? lessonProgress.slideIndex : 0}
+        onProgress={onLessonProgress}
         onQuizComplete={onLessonQuizComplete}
         onComplete={() => {
           if (!completedLessons.includes(0)) {
@@ -2699,6 +2755,8 @@ function Home({
       <FractureLesson
         onBack={() => setActiveLesson(null)}
         finalQuizXpAlreadyClaimed={lesson2FinalQuizScoringCompleted}
+        initialSlide={resumeProgress && lessonProgress?.lessonIndex === 1 ? lessonProgress.slideIndex : 0}
+        onProgress={onLessonProgress}
         onQuizComplete={onLesson2QuizComplete}
         onComplete={() => {
           if (!completedLessons.includes(1)) {
@@ -2713,6 +2771,7 @@ function Home({
 
   function openLesson(index: number, title: string) {
     if (index <= 1) {
+      setResumeProgress(false);
       setActiveLesson(index);
       return;
     }
@@ -2744,8 +2803,12 @@ function Home({
             <h1>Hey {profile.name}, ready to get bone-smart?</h1>
             <p>Pick up where you left off, or explore something new.</p>
             <div className="welcome-actions">
-              <button className="dark-button" type="button" onClick={() => setActiveLesson(0)}>
-                Keep learning <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+              <button className="dark-button" type="button" onClick={() => {
+                const progress = lessonProgress ?? { lessonIndex: 0, slideIndex: 0 };
+                setResumeProgress(true);
+                setActiveLesson(progress.lessonIndex);
+              }}>
+                Continue where I left off <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
               </button>
               <button className="game-shortcut-button" type="button" onClick={() => setShowGame(true)}>
                 <BoneSymbol className="game-shortcut-bone" /> Play Bone Bonanza
@@ -2904,7 +2967,16 @@ export default function App() {
       xp={account?.xp ?? 0}
       lesson1QuizCompleted={account?.lesson1QuizCompleted ?? false}
       lesson2FinalQuizScoringCompleted={account?.lesson2FinalQuizScoringCompleted ?? false}
+      lessonProgress={getLessonProgress(account)}
       onLessonComplete={completeLesson}
+      onLessonProgress={(progress) => {
+        if (!account) return;
+        const accounts = loadAccounts();
+        const currentAccount = accounts[account.username.toLowerCase()] ?? account;
+        const updatedAccount = { ...currentAccount, lessonProgress: progress };
+        saveAccount(updatedAccount, accounts);
+        setAccount(updatedAccount);
+      }}
       onLessonQuizComplete={(earnedXp) => {
         if (!account || account.lesson1QuizCompleted) return;
         const updatedAccount = {
