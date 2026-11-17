@@ -1276,7 +1276,7 @@ const bones: Bone[] = [
   { id: "skull", name: "Skull", region: "Head", description: "Your skull is a hard helmet that protects your brain.", landmark: "top of your head", x: 160, y: 42, imageX: 203, imageY: 43 },
   { id: "rib-cage", name: "Rib cage", region: "Chest", description: "Your rib cage is a group of curved bones around your chest. It helps protect your heart and lungs.", landmark: "the curved bones around the chest", x: 180, y: 111, imageX: 244, imageY: 232 },
   { id: "sternum", name: "Sternum", region: "Chest", description: "The sternum is one flat bone in the middle of your chest. Your ribs meet it at the front.", landmark: "the flat bone in the middle of the chest", x: 160, y: 120, imageX: 204, imageY: 208 },
-  { id: "humerus", name: "Humerus", region: "Arm", description: "The humerus is the long bone in your upper arm, between your shoulder and elbow.", landmark: "the upper arm", x: 111, y: 155, imageX: 101, imageY: 239 },
+  { id: "humerus", name: "Humerus", region: "Arm", description: "The humerus is the long bone in your upper arm, between your shoulder and elbow.", landmark: "the upper arm", x: 105, y: 126, imageX: 101, imageY: 239 },
   { id: "radius", name: "Radius", region: "Forearm", description: "The radius is one of your two forearm bones. With your palm facing forward, it is on the thumb side.", landmark: "the thumb side of the forearm", x: 92, y: 174, imageX: 75, imageY: 360 },
   { id: "ulna", name: "Ulna", region: "Forearm", description: "The ulna is the other forearm bone. With your palm facing forward, it is on the pinky side.", landmark: "the pinky side of the forearm", x: 106, y: 174, imageX: 89, imageY: 360 },
   { id: "carpals", name: "Carpals", region: "Hand", description: "Carpals are the small bones that make up your wrist. They help your hand bend and turn.", landmark: "the wrist", x: 98, y: 193, imageX: 79, imageY: 423 },
@@ -1284,8 +1284,8 @@ const bones: Bone[] = [
   { id: "phalanges", name: "Phalanges", region: "Hand", description: "Phalanges are the bones in your fingers and toes. This map points to the finger bones.", landmark: "the fingers", x: 80, y: 225, imageX: 94, imageY: 468 },
   { id: "femur", name: "Femur", region: "Leg", description: "The femur is your thigh bone. It is the longest and strongest bone in your body.", landmark: "the thigh", x: 146, y: 249, imageX: 243, imageY: 486 },
   { id: "patella", name: "Patella", region: "Knee", description: "The patella is your kneecap. It sits at the front of your knee and helps protect it.", landmark: "the front of the knee", x: 146, y: 279, imageX: 229, imageY: 593 },
-  { id: "fibula", name: "Fibula", region: "Lower leg", description: "The fibula is the thinner bone along the outer side of your lower leg. It sits beside the tibia.", landmark: "the thinner bone on the outer side", x: 164, y: 326, imageX: 237, imageY: 685 },
-  { id: "tibia", name: "Tibia", region: "Lower leg", description: "The tibia is the bigger, strong bone at the front and inner side of your lower leg. It carries lots of your weight.", landmark: "the big shin bone on the inner side", x: 145, y: 326, imageX: 219, imageY: 680 },
+  { id: "fibula", name: "Fibula", region: "Lower leg", description: "The fibula is the thinner bone along the outer side of your lower leg. It sits beside the tibia.", landmark: "the thinner bone on the outer side", x: 185, y: 315, imageX: 237, imageY: 685 },
+  { id: "tibia", name: "Tibia", region: "Lower leg", description: "The tibia is the bigger, strong bone at the front and inner side of your lower leg. It carries lots of your weight.", landmark: "the big shin bone on the inner side", x: 144, y: 315, imageX: 219, imageY: 680 },
   { id: "pelvis", name: "Pelvis", region: "Hips", description: "Your pelvis is a strong group of bones at your hips. It helps support your body and protects organs inside.", landmark: "the hips", x: 160, y: 204, imageX: 203, imageY: 367 },
 ];
 
@@ -1332,7 +1332,7 @@ function SkeletonMap({
         <path className="skeleton-thigh" d="m146 215-3 53m31-53 3 53" />
         <path className="skeleton-knee" d="M143 268q3-6 7 0l1 14q-4 6-8 0zm29 0q3-6 7 0l1 14q-4 6-8 0z" />
         <path className="skeleton-tibia" d="m145 282-2 68m31-68 5 68" />
-        <path className="skeleton-fibula" d="m153 283-8 66m27-66 10 66" />
+        <path className="skeleton-fibula" d="m138 283-8 66m50-66 10 66" />
         <path className="skeleton-foot" d="m143 350-2 14-13 7q-4 6 3 7h30l-1-8-12-7m29-13 2 14 13 7q4 6-3 7h-30l1-8 12-7" />
       </g>
       {!interactive && (
@@ -1702,8 +1702,27 @@ function BoneLesson({
                 ← Back to {focus.name}
               </button>
               {functionPassed && (
-                <button className="primary-button" type="button" onClick={() => { setPhase("practice"); setFeedback(""); setMapExpression("neutral"); }}>
-                  Body map <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={() => {
+                    setFeedback("");
+                    setMapExpression("neutral");
+                    if (slide === bones.length - 1) {
+                      setPhase("practice");
+                      return;
+                    }
+                    goToSlide(slide + 1);
+                    setPlaced(new Set());
+                    setSelectedBone(null);
+                    setDraggedBone(null);
+                    setFunctionAnswer(null);
+                    setFunctionPassed(false);
+                    setPhase("learn");
+                  }}
+                >
+                  {slide === bones.length - 1 ? "Body map challenge" : "Next bone"}
+                  <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
                 </button>
               )}
             </div>
@@ -1837,7 +1856,7 @@ function BoneLesson({
                   <path className="skeleton-thigh" d="m146 215-3 53m31-53 3 53" />
                   <path className="skeleton-knee" d="M143 268q3-6 7 0l1 14q-4 6-8 0zm29 0q3-6 7 0l1 14q-4 6-8 0z" />
                   <path className="skeleton-tibia" d="m145 282-2 68m31-68 5 68" />
-                  <path className="skeleton-fibula" d="m153 283-8 66m27-66 10 66" />
+                  <path className="skeleton-fibula" d="m138 283-8 66m50-66 10 66" />
                   <path className="skeleton-foot" d="m143 350-2 14-13 7q-4 6 3 7h30l-1-8-12-7m29-13 2 14 13 7q4 6-3 7h-30l1-8 12-7" />
                 </g>
                 {availableBones.map((bone) => {
@@ -1920,7 +1939,7 @@ function BoneBeatGame({
   lesson1Completed: boolean;
   lesson2Completed: boolean;
   onSpendXp: (amount: number) => boolean;
-  onCollectStar: () => void;
+  onCollectStar: (count: number) => void;
   onEarnQuizXp: (amount: number) => void;
   onExit: () => void;
 }) {
@@ -2143,21 +2162,20 @@ function BoneBeatGame({
       const lastLane = Math.ceil((cameraY + height) / barrierLaneSpacing) + 1;
       for (let column = firstBarrier; column <= lastBarrier; column += 1) {
         const barrierX = (column + 1) * barrierSpacing;
-        const starInterval = difficulty === "hard" ? 1 : 3;
-        const hasStar = difficulty === "hard" || ((column % starInterval) + starInterval) % starInterval === 2;
+        const hasStar = true;
         const firstVerticalChunk = Math.floor(firstLane / 12) - 1;
         const lastVerticalChunk = Math.floor(lastLane / 12) + 1;
         if (hasStar) {
           for (let verticalChunk = firstVerticalChunk; verticalChunk <= lastVerticalChunk; verticalChunk += 1) {
             const gapStart = verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
-            const starCount = difficulty === "hard" ? 4 : 1;
+            const starCount = difficulty === "hard" ? 8 : 3;
             for (let starIndex = 0; starIndex < starCount; starIndex += 1) {
               const starId = `barrier-${column}-${verticalChunk}-${starIndex}`;
               if (collectedStars.current.has(starId)) continue;
-              const starX = difficulty === "hard" ? barrierX - 240 + starIndex * 34 : barrierX - 42;
-              const starY = difficulty === "hard"
-                ? (gapStart + 1) * barrierLaneSpacing
-                : (gapStart + 1) * barrierLaneSpacing + 48 + (tileRandom(column, verticalChunk, 73) > 0.5 ? 23 : -23);
+              const starX = difficulty === "hard"
+                ? barrierX - 340 + starIndex * 38
+                : barrierX - 160 + starIndex * 48;
+              const starY = (gapStart + 1) * barrierLaneSpacing;
               if (starX > current.x + 24) {
                 drawStar(starX - cameraX, starY - cameraY, Math.sin(now / 240 + column + verticalChunk + starIndex) * 0.18);
               }
@@ -2194,7 +2212,7 @@ function BoneBeatGame({
       player.current.angle = Math.atan2(velocityY * scale, velocityX * scale) + Math.PI / 2;
 
       let collision = false;
-      let foundStar = false;
+      let foundStars = 0;
       const nearbyBarrier = Math.floor(player.current.x / barrierSpacing);
       for (let column = Math.max(0, nearbyBarrier - 1); column <= nearbyBarrier + 1 && !collision; column += 1) {
         const barrierX = (column + 1) * barrierSpacing;
@@ -2233,30 +2251,28 @@ function BoneBeatGame({
 
       const currentVerticalChunk = Math.floor(player.current.y / (12 * barrierLaneSpacing));
       for (let column = Math.max(0, nearbyBarrier - 1); column <= nearbyBarrier + 1; column += 1) {
-        const starInterval = difficulty === "hard" ? 1 : 3;
-        if (difficulty !== "hard" && ((column % starInterval) + starInterval) % starInterval !== 2) continue;
         for (let verticalChunk = currentVerticalChunk - 1; verticalChunk <= currentVerticalChunk + 1; verticalChunk += 1) {
           const gapStart = verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
-          const starCount = difficulty === "hard" ? 4 : 1;
+          const starCount = difficulty === "hard" ? 8 : 3;
           for (let starIndex = 0; starIndex < starCount; starIndex += 1) {
             const starId = `barrier-${column}-${verticalChunk}-${starIndex}`;
             if (collectedStars.current.has(starId)) continue;
             const barrierX = (column + 1) * barrierSpacing;
-            const starX = difficulty === "hard" ? barrierX - 240 + starIndex * 34 : barrierX - 42;
-            const starY = difficulty === "hard"
-              ? (gapStart + 1) * barrierLaneSpacing
-              : (gapStart + 1) * barrierLaneSpacing + 48 + (tileRandom(column, verticalChunk, 73) > 0.5 ? 23 : -23);
+            const starX = difficulty === "hard"
+              ? barrierX - 340 + starIndex * 38
+              : barrierX - 160 + starIndex * 48;
+            const starY = (gapStart + 1) * barrierLaneSpacing;
             if (starX > player.current.x && Math.hypot(player.current.x - starX, player.current.y - starY) < playerRadius + 14) {
               collectedStars.current.add(starId);
               collectedStarCount.current += 1;
-              foundStar = true;
+              foundStars += 1;
             }
           }
         }
       }
-      if (foundStar) {
+      if (foundStars > 0) {
         setStarsCollected(collectedStarCount.current);
-        collectStarRef.current();
+        collectStarRef.current(foundStars);
       }
       drawMap(now);
       if (collision) {
@@ -2341,14 +2357,14 @@ function BoneBeatGame({
           <canvas ref={canvasRef} className="bone-map-canvas" aria-label="Top-down map with Benny surrounded by scattered bones" />
           <div className="game-hud">
             <span className="game-score">TIME <strong>{distance}s</strong></span>
-            <span className="game-stars">STARS <strong>{starsCollected}</strong> · +1 XP EACH</span>
+            <span className="game-stars">STARS <strong>{starsCollected}</strong> · +10 XP EACH</span>
             <span className="map-direction-hint">AUTO-RUN → · STEER WITH WASD OR ARROWS</span>
           </div>
           {!active && !dead && (
             <div className="game-overlay">
               <span className="game-overlay-icon" aria-hidden="true"><Icon><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" /></Icon></span>
               <h2>Choose your boneyard</h2>
-              <p>Both runs cost 10 XP to enter. Stars are worth 1 XP.</p>
+              <p>Both runs cost 10 XP to enter. Collect stars for 10 XP each.</p>
               <div className="difficulty-options">
                 <button className={`difficulty-option ${difficulty === "easy" ? "selected" : ""}`} type="button" aria-pressed={difficulty === "easy"} onClick={() => setDifficulty("easy")}>
                   <strong>Easy</strong><small>Bone rows · steady speed</small>
@@ -2706,7 +2722,7 @@ function Home({
   onLessonQuizComplete: (earnedXp: number) => void;
   onLesson2QuizComplete: (earnedXp: number) => void;
   onSpendXp: (amount: number) => boolean;
-  onCollectStar: () => void;
+  onCollectStar: (count: number) => void;
   onEarnQuizXp: (amount: number) => void;
   onSignOut: () => void;
 }) {
@@ -3006,9 +3022,9 @@ export default function App() {
         setAccount(updatedAccount);
         return true;
       }}
-      onCollectStar={() => {
+      onCollectStar={(count) => {
         if (!account) return;
-        const updatedAccount = { ...account, xp: (account.xp ?? 0) + 1 };
+        const updatedAccount = { ...account, xp: (account.xp ?? 0) + count * 10 };
         saveAccount(updatedAccount, loadAccounts());
         setAccount(updatedAccount);
       }}
