@@ -100,7 +100,7 @@ function Mascot({ small = false }: { small?: boolean }) {
 }
 
 type LessonProgress = {
-  lessonIndex: 0 | 1 | 2;
+  lessonIndex: 0 | 1 | 2 | 3;
   slideIndex: number;
 };
 
@@ -118,6 +118,7 @@ type Account = {
   lesson2FinalQuizCompleted?: boolean;
   lesson2FinalQuizScoringCompleted?: boolean;
   lesson3QuizCompleted?: boolean;
+  lesson4QuizCompleted?: boolean;
   lessonProgress?: LessonProgress;
 };
 
@@ -137,7 +138,8 @@ function hasCompletedOnboarding(account: Account) {
       account.lesson1QuizCompleted ||
       account.lesson2QuizCompleted ||
       account.lesson2FinalQuizCompleted ||
-      account.lesson3QuizCompleted,
+      account.lesson3QuizCompleted ||
+      account.lesson4QuizCompleted,
   );
 }
 
@@ -145,7 +147,10 @@ function getLessonProgress(account: Account | null): LessonProgress | undefined 
   const progress = account?.lessonProgress;
   if (
     !progress ||
-    (progress.lessonIndex !== 0 && progress.lessonIndex !== 1 && progress.lessonIndex !== 2) ||
+    (progress.lessonIndex !== 0 &&
+      progress.lessonIndex !== 1 &&
+      progress.lessonIndex !== 2 &&
+      progress.lessonIndex !== 3) ||
     !Number.isInteger(progress.slideIndex) ||
     progress.slideIndex < 0
   ) {
@@ -1556,11 +1561,422 @@ function HealingLesson({
   );
 }
 
+const castSlides = [
+  {
+    eyebrow: "WHAT IS A CAST?",
+    title: "A cast gives an injured bone a safe hug",
+    paragraphs: ["A cast wraps around an injured arm or leg, sometimes near a joint. It helps keep the hurt part still while your body fixes the bone."],
+    vocabulary: [
+      { word: "Cast", pronunciation: "KAST", meaning: "a firm cover that helps protect an injury" },
+      { word: "Joint", pronunciation: "JOYNT", meaning: "a place where two bones meet, like your elbow" },
+    ],
+    points: ["Your body heals the bone. The cast helps protect it.", "A doctor or nurse decides what kind of support you need."],
+    question: "How can a cast help?",
+    options: ["It helps keep an injured part still and safe.", "It fixes a bone in one day.", "It takes the place of a bone."],
+    answer: 0,
+  },
+  {
+    eyebrow: "HARD CASTS",
+    title: "A hard cast makes a strong shell",
+    paragraphs: ["A hard cast is made from layers wrapped around soft padding. The layers get firm and make a strong shell."],
+    vocabulary: [
+      { word: "Fiberglass", pronunciation: "FYE-ber-glass", meaning: "a strong, light material" },
+      { word: "Plaster", pronunciation: "PLAS-ter", meaning: "a powder that is mixed with water" },
+      { word: "Padding", pronunciation: "PAD-ing", meaning: "a soft layer that cushions your skin" },
+    ],
+    points: ["A care team may use fiberglass or plaster.", "The padding sits between your skin and the hard shell."],
+    question: "What happens when hard-cast layers set?",
+    options: ["They become a firm shell around the padding.", "They turn into skin.", "They make the bone wiggle."],
+    answer: 0,
+  },
+  {
+    eyebrow: "SOFT CASTS",
+    title: "Some casts are more flexible than others",
+    paragraphs: ["A soft cast or brace can bend more than a hard cast. Some are removable, but only when your doctor or nurse says it is okay."],
+    vocabulary: [
+      { word: "Flexible", pronunciation: "FLEK-suh-bul", meaning: "able to bend" },
+      { word: "Removable", pronunciation: "ree-MOO-vuh-bul", meaning: "something that can be taken off" },
+      { word: "Brace", pronunciation: "BRAYS", meaning: "a support that helps hold an injured part steady" },
+    ],
+    points: ["Soft supports can be made from bendy material or fabric.", "Never take off a cast or brace without asking your care team."],
+    question: "How can a soft cast be different from a hard cast?",
+    options: ["It can bend more and may be removable.", "It is always made of metal.", "It never needs a doctor's advice."],
+    answer: 0,
+  },
+  {
+    eyebrow: "HOW DOES A CAST HELP?",
+    title: "Keeping still helps protect the bone",
+    paragraphs: ["A cast holds the hurt part steady. That way, it is less likely to get bumped or moved while your body heals."],
+    vocabulary: [
+      { word: "Steady", pronunciation: "STED-ee", meaning: "not moving around" },
+      { word: "Heal", pronunciation: "HEEL", meaning: "to get better over time" },
+      { word: "Snug", pronunciation: "SNUHG", meaning: "fitting closely, but not too tight" },
+    ],
+    points: ["A cast should feel snug, not painfully tight.", "Tell a grown-up if your cast hurts or feels too tight."],
+    question: "Why does a cast help hold an injured part still?",
+    options: ["To help protect it while your body heals.", "To stop your body from healing.", "To make the cast grow."],
+    answer: 0,
+  },
+  {
+    eyebrow: "PUTTING ON & TAKING OFF A CAST",
+    title: "A trained care team puts on and removes casts",
+    paragraphs: ["An orthopedic specialist checks the injury. That means a bone-care expert, like a doctor or nurse, adds soft padding, then wraps and shapes the cast."],
+    vocabulary: [
+      { word: "Orthopedic", pronunciation: "or-thuh-PEE-dik", meaning: "about bones and how we move" },
+      { word: "Specialist", pronunciation: "SPESH-uh-list", meaning: "a person with special training in one kind of care" },
+      { word: "Vibrating", pronunciation: "VYE-bray-ting", meaning: "shaking very quickly" },
+    ],
+    points: ["When it is time, a trained professional uses a special vibrating saw to remove a hard cast.", "The saw cuts the hard cast, not your skin. Never try to cut off a cast yourself."],
+    question: "Who should put on or take off a cast?",
+    options: ["A trained doctor, nurse, or cast specialist.", "A friend at home.", "You, using scissors."],
+    answer: 0,
+  },
+  {
+    eyebrow: "CAST CARE",
+    title: "Take care of your cast—and speak up",
+    paragraphs: ["Keep your cast dry unless your care team says it is waterproof. Follow the instructions your doctor or nurse gives you."],
+    vocabulary: [
+      { word: "Waterproof", pronunciation: "WAW-ter-proof", meaning: "made so water cannot get through" },
+      { word: "Numb", pronunciation: "NUHM", meaning: "when you cannot feel a part of your body normally" },
+      { word: "Tingling", pronunciation: "TING-gling", meaning: "a pins-and-needles feeling" },
+      { word: "Swelling", pronunciation: "SWELL-ing", meaning: "when a body part gets puffy" },
+    ],
+    points: ["Do not poke things inside your cast or pull out its padding.", "Do not walk or stand on your cast unless your care team says it is okay.", "Tell a grown-up right away if pain gets worse, or your fingers or toes feel numb, have tingling or swelling, feel cold, or look blue."],
+    question: "What should you do if your fingers feel numb or look blue?",
+    options: ["Tell a grown-up right away so they can contact your care team.", "Put something inside the cast to scratch.", "Try to loosen the cast by yourself."],
+    answer: 0,
+  },
+];
+
+function CastSlideText({
+  text,
+  vocabulary,
+}: {
+  text: string;
+  vocabulary: { word: string; pronunciation: string; meaning: string }[];
+}) {
+  const pronunciationByWord = new Map(vocabulary.map(({ word, pronunciation }) => [word.toLowerCase(), pronunciation]));
+  const words = vocabulary.map(({ word }) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const parts = text.split(new RegExp(`\\b(${words.join("|")})\\b`, "gi"));
+
+  return parts.map((part, index) => {
+    const pronunciation = pronunciationByWord.get(part.toLowerCase());
+    return pronunciation
+      ? <strong key={index}>{part} ({pronunciation})</strong>
+      : part;
+  });
+}
+
+const castFinalQuestions = [
+  {
+    question: "How can a hard cast help?",
+    options: ["It helps keep an injured part safe and still.", "It heals the bone all by itself.", "It makes the bone wiggle."],
+    answer: 0,
+  },
+  {
+    question: "What can be used to make a hard cast?",
+    options: ["Fiberglass or plaster, with soft padding underneath.", "Only paper and glue.", "Metal wires against your skin."],
+    answer: 0,
+  },
+  {
+    question: "Who should take off a hard cast?",
+    options: ["A trained doctor, nurse, or cast specialist.", "The person wearing it.", "A friend with scissors."],
+    answer: 0,
+  },
+  {
+    question: "What should you do if your fingers feel numb or look blue?",
+    options: ["Tell a grown-up right away so they can call your care team.", "Put a ruler inside your cast.", "Try to loosen your cast yourself."],
+    answer: 0,
+  },
+];
+
+function CastIllustration({ stage }: { stage: number }) {
+  const castTop = stage > 3 ? 83 : 102;
+  const castBottom = stage > 3 ? 244 : 220;
+  return (
+    <svg className="fracture-slide-art healing-stage-art" viewBox="0 0 420 300" aria-hidden="true">
+      <circle cx="210" cy="145" r="118" fill="#e2f2fb" />
+      <path d="M197 45q-20 1-19 22l13 35-5 119q24 24 48 0l-5-119 13-35q1-21-19-22Z" fill="#f3d9ac" stroke="#34566d" strokeWidth="4" strokeLinejoin="round" />
+      <path d={`M177 ${castTop}q33-14 66 0v${castBottom - castTop}q-33 15-66 0Z`} fill={stage === 2 ? "#b9d1c5" : stage === 3 ? "#91c5b5" : "#f7f5eb"} stroke="#56758a" strokeWidth="4" />
+      {Array.from({ length: 5 }, (_, index) => (
+        <path
+          key={index}
+          d={`M179 ${castTop + 17 + index * 27}q31-13 62 0`}
+          fill="none"
+          stroke={stage === 2 ? "#718f83" : "#c2cfcc"}
+          strokeWidth="3"
+        />
+      ))}
+      <path d="M187 64q23-13 46 0" fill="none" stroke="#34566d" strokeWidth="4" strokeLinecap="round" />
+      <path d="M187 254q23 13 46 0" fill="none" stroke="#34566d" strokeWidth="4" strokeLinecap="round" />
+      <text x="210" y="278" textAnchor="middle" fill="#42637a" fontSize="12" fontWeight="800" letterSpacing="1.1">
+        {["", "CAST SUPPORT", "HARD CAST", "SOFT CAST", "PADDING", "CARE TEAM", "SAFE CAST CARE"][stage]}
+      </text>
+    </svg>
+  );
+}
+
+function CastLesson({
+  onBack,
+  onComplete,
+  onQuizComplete,
+  xpAlreadyClaimed,
+  initialSlide,
+  onProgress,
+}: {
+  onBack: () => void;
+  onComplete: () => void;
+  onQuizComplete: (earnedXp: number) => void;
+  xpAlreadyClaimed: boolean;
+  initialSlide: number;
+  onProgress: (progress: LessonProgress) => void;
+}) {
+  const [phase, setPhase] = useState<"learn" | "quick-check" | "final-quiz" | "finished">("learn");
+  const [slide, setSlide] = useState(() => Math.min(Math.max(initialSlide, 0), castSlides.length - 1));
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [finalQuizIndex, setFinalQuizIndex] = useState(0);
+  const [finalQuizCorrectCount, setFinalQuizCorrectCount] = useState(0);
+  const [finalQuizXp, setFinalQuizXp] = useState(0);
+  const [wrongAttempts, setWrongAttempts] = useState(0);
+  const [answerChecked, setAnswerChecked] = useState(false);
+  const [answerRevealed, setAnswerRevealed] = useState(false);
+  const [finalQuizFeedback, setFinalQuizFeedback] = useState("");
+  const [xpWasAlreadyClaimed] = useState(xpAlreadyClaimed);
+  const onProgressRef = useRef(onProgress);
+  onProgressRef.current = onProgress;
+  const currentSlide = castSlides[slide];
+  const currentFinalQuestion = castFinalQuestions[finalQuizIndex];
+
+  useEffect(() => {
+    onProgressRef.current({ lessonIndex: 3, slideIndex: slide });
+  }, [slide]);
+
+  function goToSlide(nextSlide: number) {
+    onProgressRef.current({ lessonIndex: 3, slideIndex: nextSlide });
+    setSlide(nextSlide);
+  }
+
+  function advanceQuickCheck() {
+    if (selectedAnswer !== currentSlide.answer) {
+      setSelectedAnswer(null);
+      return;
+    }
+    if (slide === castSlides.length - 1) {
+      setFinalQuizIndex(0);
+      setFinalQuizCorrectCount(0);
+      setFinalQuizXp(0);
+      setWrongAttempts(0);
+      setAnswerChecked(false);
+      setAnswerRevealed(false);
+      setFinalQuizFeedback("");
+      setSelectedAnswer(null);
+      setPhase("final-quiz");
+      return;
+    }
+    goToSlide(slide + 1);
+    setSelectedAnswer(null);
+    setPhase("learn");
+  }
+
+  function advanceFinalQuiz() {
+    if (answerRevealed) {
+      moveToNextQuestion();
+      return;
+    }
+    if (answerChecked) {
+      if (selectedAnswer !== currentFinalQuestion.answer) {
+        setSelectedAnswer(null);
+        setAnswerChecked(false);
+        setFinalQuizFeedback("");
+        return;
+      }
+      moveToNextQuestion();
+      return;
+    }
+    if (selectedAnswer === null) return;
+
+    setAnswerChecked(true);
+    if (selectedAnswer === currentFinalQuestion.answer) {
+      const earned = xpWasAlreadyClaimed ? 0 : wrongAttempts === 0 ? 10 : wrongAttempts === 1 ? 5 : 1;
+      setFinalQuizXp((total) => total + earned);
+      if (wrongAttempts === 0) setFinalQuizCorrectCount((count) => count + 1);
+      setFinalQuizFeedback(xpWasAlreadyClaimed ? "That’s right! Nice remembering." : `That’s right! You earned ${earned} XP.`);
+      return;
+    }
+    if (wrongAttempts === 2) {
+      if (!xpWasAlreadyClaimed) setFinalQuizXp((total) => total + 1);
+      setAnswerRevealed(true);
+      setFinalQuizFeedback(
+        xpWasAlreadyClaimed
+          ? `The answer is: ${currentFinalQuestion.options[currentFinalQuestion.answer]}`
+          : `You earned 1 XP. The answer is: ${currentFinalQuestion.options[currentFinalQuestion.answer]}`,
+      );
+      return;
+    }
+    setWrongAttempts((attempts) => attempts + 1);
+    setFinalQuizFeedback(wrongAttempts === 0 ? "Not quite. Try once more." : "Not quite. One more try!");
+  }
+
+  function moveToNextQuestion() {
+    if (finalQuizIndex === castFinalQuestions.length - 1) {
+      onQuizComplete(finalQuizXp);
+      setPhase("finished");
+      return;
+    }
+    setFinalQuizIndex((index) => index + 1);
+    setSelectedAnswer(null);
+    setWrongAttempts(0);
+    setAnswerChecked(false);
+    setAnswerRevealed(false);
+    setFinalQuizFeedback("");
+  }
+
+  if (phase === "finished") {
+    return (
+      <main className="bone-lesson-page">
+        <header className="lesson-topbar">
+          <button className="lesson-back" type="button" onClick={onBack}>← Back to lessons</button>
+          <BoneLogo />
+          <span className="lesson-top-progress">LESSON 4 COMPLETE</span>
+        </header>
+        <section className="lesson-finish-card">
+          <span className="finish-badge" aria-hidden="true">✓</span>
+          <span className="eyebrow">BONE-RILLIANT WORK!</span>
+          <h1>You’re a cast-care champion!</h1>
+          <p>You got {finalQuizCorrectCount} out of {castFinalQuestions.length} final quiz questions right on your first try. Remember to follow your care team’s instructions and tell a grown-up if something feels wrong.</p>
+          <div className="lesson-results-stats">
+            <div><strong>{finalQuizCorrectCount}/{castFinalQuestions.length}</strong><span>correct on first try</span></div>
+            <div><strong>+{finalQuizXp} XP</strong><span>{xpWasAlreadyClaimed ? "already collected" : "added to your account"}</span></div>
+          </div>
+          <p className="lesson-xp-note">{xpWasAlreadyClaimed ? "You’ve already collected XP for this quiz. Replay to practice!" : "A correct first try earns 10 XP, a correct second try earns 5 XP, and the third try earns 1 XP."}</p>
+          <div className="lesson-finish-actions">
+            <button className="primary-button" type="button" onClick={onComplete}>Back to my lessons</button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="bone-lesson-page">
+      <header className="lesson-topbar">
+        <button className="lesson-back" type="button" onClick={onBack}>← Back to lessons</button>
+        <BoneLogo />
+        <span className="lesson-top-progress">LESSON 4 OF 4</span>
+      </header>
+      <div className="fracture-lesson-wrap" aria-live="polite">
+        <div className="bone-lesson-heading">
+          {phase === "final-quiz" ? (
+            <div className="learning-progress">
+              <div className="bone-progress-label"><span>FINAL QUIZ · {finalQuizCorrectCount} CORRECT · {xpWasAlreadyClaimed ? "XP ALREADY EARNED" : `${finalQuizXp} XP`}</span><strong>{finalQuizIndex + 1} of {castFinalQuestions.length}</strong></div>
+              <div className="bone-progress-track"><span style={{ width: `${((finalQuizIndex + 1) / castFinalQuestions.length) * 100}%` }} /></div>
+            </div>
+          ) : (
+            <div className="learning-progress">
+              <div className="bone-progress-label"><span>{phase === "learn" ? "CASTS & CAST CARE" : "QUICK CHECK"}</span><strong>{slide + 1} of {castSlides.length}</strong></div>
+              <div className="bone-progress-track"><span style={{ width: `${((slide + 1) / castSlides.length) * 100}%` }} /></div>
+            </div>
+          )}
+        </div>
+        {phase === "learn" ? (
+          <section className="fracture-card">
+            <div className="fracture-illustration fracture-illustration-xray">
+              <CastIllustration stage={slide + 1} />
+            </div>
+            <div className="fracture-slide-copy">
+              <span className="eyebrow">{currentSlide.eyebrow}</span>
+              <h1><CastSlideText text={currentSlide.title} vocabulary={currentSlide.vocabulary} /></h1>
+              {currentSlide.paragraphs.map((paragraph) => (
+                <p key={paragraph}><CastSlideText text={paragraph} vocabulary={currentSlide.vocabulary} /></p>
+              ))}
+              <div className="cast-vocabulary" aria-label="New words and pronunciations">
+                {currentSlide.vocabulary.map(({ word, pronunciation, meaning }) => (
+                  <p className="fracture-vocabulary" key={word}>
+                    <strong>{word} ({pronunciation}): </strong>{meaning}
+                  </p>
+                ))}
+              </div>
+              <ul className="fracture-points">
+                {currentSlide.points.map((point) => (
+                  <li key={point}><CastSlideText text={point} vocabulary={currentSlide.vocabulary} /></li>
+                ))}
+              </ul>
+              <div className="fracture-actions">
+                <button className="back-button" type="button" disabled={slide === 0} onClick={() => goToSlide(slide - 1)}>← Back</button>
+                <button className="primary-button" type="button" onClick={() => { setSelectedAnswer(null); setPhase("quick-check"); }}>
+                  Quick check <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : phase === "quick-check" ? (
+          <section className="fracture-quiz-card">
+            <span className="eyebrow">QUICK CHECK · SLIDE {slide + 1}</span>
+            <h1>{currentSlide.question}</h1>
+            <div className="fracture-quiz-options">
+              {currentSlide.options.map((option, index) => (
+                <button
+                  type="button"
+                  className={`fracture-quiz-option ${selectedAnswer === index ? (index === currentSlide.answer ? "correct" : "incorrect") : ""}`}
+                  key={option}
+                  disabled={selectedAnswer !== null}
+                  onClick={() => setSelectedAnswer(index)}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+            {selectedAnswer !== null && (
+              <p className={`fracture-quiz-feedback ${selectedAnswer === currentSlide.answer ? "correct" : ""}`} aria-live="polite">
+                {selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Let’s try that one again."}
+              </p>
+            )}
+            <div className="fracture-actions">
+              <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSelectedAnswer(null); }}>← Review slide</button>
+              <button className="primary-button" type="button" disabled={selectedAnswer === null} onClick={advanceQuickCheck}>
+                {selectedAnswer === currentSlide.answer && slide === castSlides.length - 1 ? "Start final quiz" : selectedAnswer === currentSlide.answer ? "Next slide" : "Try again"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+              </button>
+            </div>
+          </section>
+        ) : (
+          <section className="fracture-quiz-card">
+            <span className="eyebrow">FINAL QUIZ · QUESTION {finalQuizIndex + 1}</span>
+            <h1>{currentFinalQuestion.question}</h1>
+            <p className="review-xp-callout">{xpWasAlreadyClaimed ? "You’ve already collected XP for this quiz. Replay to practice!" : "First try: 10 XP · Second try: 5 XP · Third try: 1 XP"}</p>
+            <div className="fracture-quiz-options">
+              {currentFinalQuestion.options.map((option, index) => (
+                <button
+                  type="button"
+                  className={`fracture-quiz-option ${!answerChecked && selectedAnswer === index ? "selected" : ""} ${answerChecked && selectedAnswer === index ? (index === currentFinalQuestion.answer ? "correct" : "incorrect") : ""} ${answerRevealed && index === currentFinalQuestion.answer ? "correct" : ""}`}
+                  key={option}
+                  disabled={answerChecked || answerRevealed}
+                  onClick={() => setSelectedAnswer(index)}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+            {finalQuizFeedback && (
+              <p className={`fracture-quiz-feedback ${selectedAnswer === currentFinalQuestion.answer || answerRevealed ? "correct" : ""}`} aria-live="polite">{finalQuizFeedback}</p>
+            )}
+            <div className="fracture-actions">
+              <button className="back-button" type="button" onClick={() => { setPhase("learn"); goToSlide(castSlides.length - 1); setSelectedAnswer(null); }}>← Review lesson</button>
+              <button className="primary-button" type="button" disabled={selectedAnswer === null && !answerRevealed} onClick={advanceFinalQuiz}>
+                {answerRevealed ? "Continue" : !answerChecked ? "Check my answer" : selectedAnswer === currentFinalQuestion.answer ? finalQuizIndex === castFinalQuestions.length - 1 ? "Finish lesson" : "Next question" : wrongAttempts === 1 ? "Try again" : "Check my answer"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+              </button>
+            </div>
+          </section>
+        )}
+      </div>
+    </main>
+  );
+}
+
 const lessons = [
   { number: "01", title: "Basic bone structure", note: "Meet 14 important bones", tone: "yellow", progress: 0 },
   { number: "02", title: "When bones break", note: "Breaks, fractures & warning signs", tone: "coral", progress: 0 },
   { number: "03", title: "How bones heal", note: "The body's repair process", tone: "blue", progress: 0 },
-  { number: "04", title: "Lesson 4", note: "Lesson placeholder", tone: "green", progress: 0 },
+  { number: "04", title: "Casts & cast care", note: "Types, how casts work & staying safe", tone: "green", progress: 0 },
 ];
 
 type Bone = {
@@ -3083,12 +3499,14 @@ function Home({
   lesson1QuizCompleted,
   lesson2FinalQuizScoringCompleted,
   lesson3QuizCompleted,
+  lesson4QuizCompleted,
   lessonProgress,
   onLessonComplete,
   onLessonProgress,
   onLessonQuizComplete,
   onLesson2QuizComplete,
   onLesson3QuizComplete,
+  onLesson4QuizComplete,
   onSpendXp,
   onCollectStar,
   onEarnQuizXp,
@@ -3100,12 +3518,14 @@ function Home({
   lesson1QuizCompleted: boolean;
   lesson2FinalQuizScoringCompleted: boolean;
   lesson3QuizCompleted: boolean;
+  lesson4QuizCompleted: boolean;
   lessonProgress?: LessonProgress;
   onLessonComplete: () => void;
   onLessonProgress: (progress: LessonProgress) => void;
   onLessonQuizComplete: (earnedXp: number) => void;
   onLesson2QuizComplete: (earnedXp: number) => void;
   onLesson3QuizComplete: (earnedXp: number) => void;
+  onLesson4QuizComplete: (earnedXp: number) => void;
   onSpendXp: (amount: number) => boolean;
   onCollectStar: (count: number, xpPerStar: number) => void;
   onEarnQuizXp: (amount: number) => void;
@@ -3116,6 +3536,7 @@ function Home({
     ...(lesson1QuizCompleted ? [0] : []),
     ...(lesson2FinalQuizScoringCompleted ? [1] : []),
     ...(lesson3QuizCompleted ? [2] : []),
+    ...(lesson4QuizCompleted ? [3] : []),
   ]);
   const [activeLesson, setActiveLesson] = useState<number | null>(null);
   const [showGame, setShowGame] = useState(false);
@@ -3193,8 +3614,31 @@ function Home({
     );
   }
 
+  if (activeLesson === 3) {
+    return (
+      <CastLesson
+        onBack={() => setActiveLesson(null)}
+        xpAlreadyClaimed={lesson4QuizCompleted}
+        initialSlide={resumeProgress && lessonProgress?.lessonIndex === 3 ? lessonProgress.slideIndex : 0}
+        onProgress={onLessonProgress}
+        onQuizComplete={onLesson4QuizComplete}
+        onComplete={() => {
+          if (!completedLessons.includes(3)) {
+            setCompletedLessons([...completedLessons, 3]);
+            onLessonComplete();
+          }
+          setActiveLesson(null);
+        }}
+      />
+    );
+  }
+
   function openLesson(index: number, title: string) {
-    if (index <= 1 || (index === 2 && lesson2FinalQuizScoringCompleted)) {
+    if (
+      index <= 1 ||
+      (index === 2 && lesson2FinalQuizScoringCompleted) ||
+      (index === 3 && lesson3QuizCompleted)
+    ) {
       setResumeProgress(false);
       setActiveLesson(index);
       return;
@@ -3253,7 +3697,10 @@ function Home({
             </div>
             <div className="lesson-list">
               {lessons.map((lesson, index) => {
-                const isOpen = index <= 1 || (index === 2 && lesson2FinalQuizScoringCompleted);
+                const isOpen =
+                  index <= 1 ||
+                  (index === 2 && lesson2FinalQuizScoringCompleted) ||
+                  (index === 3 && lesson3QuizCompleted);
                 return (
                   <button
                     className={`lesson-card ${isOpen ? "lesson-open" : "lesson-locked"}`}
@@ -3395,6 +3842,7 @@ export default function App() {
       lesson1QuizCompleted={account?.lesson1QuizCompleted ?? false}
       lesson2FinalQuizScoringCompleted={account?.lesson2FinalQuizScoringCompleted ?? false}
       lesson3QuizCompleted={account?.lesson3QuizCompleted ?? false}
+      lesson4QuizCompleted={account?.lesson4QuizCompleted ?? false}
       lessonProgress={getLessonProgress(account)}
       onLessonComplete={completeLesson}
       onLessonProgress={(progress) => {
@@ -3433,6 +3881,16 @@ export default function App() {
           ...account,
           xp: (account.xp ?? 0) + earnedXp,
           lesson3QuizCompleted: true,
+        };
+        saveAccount(updatedAccount, loadAccounts());
+        setAccount(updatedAccount);
+      }}
+      onLesson4QuizComplete={(earnedXp) => {
+        if (!account || account.lesson4QuizCompleted) return;
+        const updatedAccount = {
+          ...account,
+          xp: (account.xp ?? 0) + earnedXp,
+          lesson4QuizCompleted: true,
         };
         saveAccount(updatedAccount, loadAccounts());
         setAccount(updatedAccount);
