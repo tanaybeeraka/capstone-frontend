@@ -279,10 +279,6 @@ function SignIn({ onContinue }: { onContinue: (account: Account, isNew: boolean)
             the amazing ways your body gets back in action.
           </p>
         </div>
-        <div className="mascot-stage">
-          <div className="speech-bubble">No bones about it—<br />learning is fun!</div>
-          <Mascot />
-        </div>
         <div className="doodle doodle-one">+</div>
         <div className="doodle doodle-two">×</div>
         <div className="doodle-ring" />
@@ -2707,8 +2703,7 @@ function BoneLesson({
                 ))}
               </div>
               <div className="benny-feedback" aria-live="polite">
-                <Mascot small expression={mapExpression === "frown" ? "sad" : mapExpression === "smile" ? "happy" : "neutral"} />
-                <div><strong>Benny says</strong><p>{feedback || (placed.has(focus.id) ? `You already found the ${focus.name}! Benny’s map is smiling.` : `Can you find the ${focus.name}? Pick any name to start.`)}</p></div>
+                <div><strong>Map tip</strong><p>{feedback || (placed.has(focus.id) ? `You already found the ${focus.name}!` : `Can you find the ${focus.name}? Pick any name to start.`)}</p></div>
               </div>
               <div className="practice-actions">
                 <button className="back-button" type="button" onClick={() => { setPhase("learn"); setFeedback(""); }}>← Back to {focus.name}</button>
@@ -2825,6 +2820,8 @@ function BoneBeatGame({
   xp,
   lesson1Completed,
   lesson2Completed,
+  lesson3Completed,
+  lesson4Completed,
   onSpendXp,
   onCollectStar,
   onEarnQuizXp,
@@ -2833,6 +2830,8 @@ function BoneBeatGame({
   xp: number;
   lesson1Completed: boolean;
   lesson2Completed: boolean;
+  lesson3Completed: boolean;
+  lesson4Completed: boolean;
   onSpendXp: (amount: number) => boolean;
   onCollectStar: (count: number, xpPerStar: number) => void;
   onEarnQuizXp: (amount: number) => void;
@@ -2854,11 +2853,16 @@ function BoneBeatGame({
   const [starsCollected, setStarsCollected] = useState(0);
   const collectStarRef = useRef(onCollectStar);
   collectStarRef.current = onCollectStar;
-  const hasCompletedLessons = lesson1Completed || lesson2Completed;
+  const hasCompletedLessons = lesson1Completed || lesson2Completed || lesson3Completed || lesson4Completed;
 
   function openRecoveryQuiz() {
     if (!hasCompletedLessons) return;
-    setRecoveryQuizQuestions(makeRecoveryQuizQuestions(lesson1Completed, lesson2Completed));
+    setRecoveryQuizQuestions(makeRecoveryQuizQuestions(
+      lesson1Completed,
+      lesson2Completed,
+      lesson3Completed,
+      lesson4Completed,
+    ));
     setShowRecoveryQuiz(true);
   }
 
@@ -2913,8 +2917,26 @@ function BoneBeatGame({
     }
 
     function getBarrierLaneX(barrierX: number, lane: number) {
+      if (difficulty === "hard") {
+        const stagger = [-34, 28, -16, 40][((lane % 4) + 4) % 4];
+        return barrierX + stagger;
+      }
       if (difficulty !== "easy") return barrierX;
       return barrierX + (lane % 2 === 0 ? -56 : 56);
+    }
+
+    function getStarPosition(barrierX: number, verticalChunk: number, gapStart: number, starIndex: number) {
+      if (difficulty === "hard") {
+        const verticalOffsets = [-1.5, -1, -0.5, 0, 0.5, 1, 1.5];
+        return {
+          x: barrierX - 360 + starIndex * 56,
+          y: (verticalChunk * 12 + verticalOffsets[starIndex]) * barrierLaneSpacing,
+        };
+      }
+      return {
+        x: getBarrierLaneX(barrierX, gapStart + 1) - 240 + starIndex * 48,
+        y: (gapStart + 1) * barrierLaneSpacing,
+      };
     }
 
     function drawBone(x: number, y: number, angle: number, size: number, color: string) {
@@ -3068,15 +3090,12 @@ function BoneBeatGame({
         if (hasStar) {
           for (let verticalChunk = firstVerticalChunk; verticalChunk <= lastVerticalChunk; verticalChunk += 1) {
             const gapStart = verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
-            const starCount = difficulty === "hard" ? 8 : 3;
+            const starCount = difficulty === "hard" ? 7 : 3;
             for (let starIndex = 0; starIndex < starCount; starIndex += 1) {
               const starId = `barrier-${column}-${verticalChunk}-${starIndex}`;
               if (collectedStars.current.has(starId)) continue;
-              const starX = difficulty === "hard"
-                ? barrierX - 380 + starIndex * 38
-                : getBarrierLaneX(barrierX, gapStart + 1) - 240 + starIndex * 48;
-              const starY = (gapStart + 1) * barrierLaneSpacing;
-              drawStar(starX - cameraX, starY - cameraY, Math.sin(now / 240 + column + verticalChunk + starIndex) * 0.18);
+              const star = getStarPosition(barrierX, verticalChunk, gapStart, starIndex);
+              drawStar(star.x - cameraX, star.y - cameraY, Math.sin(now / 240 + column + verticalChunk + starIndex) * 0.18);
             }
           }
         }
@@ -3151,16 +3170,13 @@ function BoneBeatGame({
       for (let column = Math.max(0, nearbyBarrier - 1); column <= nearbyBarrier + 1; column += 1) {
         for (let verticalChunk = currentVerticalChunk - 1; verticalChunk <= currentVerticalChunk + 1; verticalChunk += 1) {
           const gapStart = verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
-          const starCount = difficulty === "hard" ? 8 : 3;
+          const starCount = difficulty === "hard" ? 7 : 3;
           for (let starIndex = 0; starIndex < starCount; starIndex += 1) {
             const starId = `barrier-${column}-${verticalChunk}-${starIndex}`;
             if (collectedStars.current.has(starId)) continue;
             const barrierX = (column + 1) * barrierSpacing;
-            const starX = difficulty === "hard"
-              ? barrierX - 380 + starIndex * 38
-              : getBarrierLaneX(barrierX, gapStart + 1) - 240 + starIndex * 48;
-            const starY = (gapStart + 1) * barrierLaneSpacing;
-            if (starX > player.current.x && Math.hypot(player.current.x - starX, player.current.y - starY) < playerRadius + 14) {
+            const star = getStarPosition(barrierX, verticalChunk, gapStart, starIndex);
+            if (star.x > player.current.x && Math.hypot(player.current.x - star.x, player.current.y - star.y) < playerRadius + 14) {
               collectedStars.current.add(starId);
               collectedStarCount.current += 1;
               foundStars += 1;
@@ -3170,7 +3186,7 @@ function BoneBeatGame({
       }
       if (foundStars > 0) {
         setStarsCollected(collectedStarCount.current);
-        collectStarRef.current(foundStars, difficulty === "easy" ? 5 : 10);
+        collectStarRef.current(foundStars, difficulty === "easy" ? 1 : 10);
       }
       drawMap(now);
       if (collision) {
@@ -3255,14 +3271,14 @@ function BoneBeatGame({
           <canvas ref={canvasRef} className="bone-map-canvas" aria-label="Top-down map with Benny surrounded by scattered bones" />
           <div className="game-hud">
             <span className="game-score">TIME <strong>{distance}s</strong></span>
-            <span className="game-stars">STARS <strong>{starsCollected}</strong> · +{difficulty === "easy" ? 5 : 10} XP EACH</span>
+            <span className="game-stars">STARS <strong>{starsCollected}</strong> · +{difficulty === "easy" ? 1 : 10} XP EACH</span>
             <span className="map-direction-hint">AUTO-RUN → · STEER WITH WASD OR ARROWS</span>
           </div>
           {!active && !dead && (
             <div className="game-overlay">
               <span className="game-overlay-icon" aria-hidden="true"><Icon><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" /></Icon></span>
               <h2>Choose your boneyard</h2>
-              <p>Both runs cost 10 XP to enter. Collect stars for {difficulty === "easy" ? 5 : 10} XP each.</p>
+              <p>Both runs cost 10 XP to enter. Collect stars for {difficulty === "easy" ? 1 : 10} XP each.</p>
               <div className="difficulty-options">
                 <button className={`difficulty-option ${difficulty === "easy" ? "selected" : ""}`} type="button" aria-pressed={difficulty === "easy"} onClick={() => setDifficulty("easy")}>
                   <strong>Easy</strong><small>Bone rows · steady speed</small>
@@ -3430,6 +3446,54 @@ const lesson2RecoveryQuestions: RecoveryQuestion[] = [
   },
 ];
 
+const lesson3RecoveryQuestions: RecoveryQuestion[] = [
+  {
+    id: "lesson3-pain",
+    question: "Why can a broken bone hurt?",
+    options: ["The injury affects nearby tissues and nerves.", "The bone has turned into muscle.", "The body has stopped sending blood."],
+    answer: 0,
+  },
+  {
+    id: "lesson3-early-healing",
+    question: "What happens soon after a bone breaks?",
+    options: ["Blood collects and forms a clot near the break.", "The soft callus turns hard right away.", "The bone pieces disappear."],
+    answer: 0,
+  },
+  {
+    id: "lesson3-callus",
+    question: "What happens to the soft callus as the bone heals?",
+    options: ["It gradually hardens into new bone.", "It turns into skin.", "It makes the break wider."],
+    answer: 0,
+  },
+];
+
+const lesson4RecoveryQuestions: RecoveryQuestion[] = [
+  {
+    id: "lesson4-cast-purpose",
+    question: "How does a cast help an injured bone?",
+    options: ["It helps keep the injured part still and protected.", "It heals the bone all by itself.", "It makes the bone move more."],
+    answer: 0,
+  },
+  {
+    id: "lesson4-hard-cast",
+    question: "What can a hard cast be made from?",
+    options: ["Fiberglass or plaster over soft padding.", "Paper and glue.", "Metal placed against the skin."],
+    answer: 0,
+  },
+  {
+    id: "lesson4-cast-removal",
+    question: "Who should remove a hard cast?",
+    options: ["A trained health professional.", "The person wearing it.", "A friend with scissors."],
+    answer: 0,
+  },
+  {
+    id: "lesson4-cast-care",
+    question: "What should you do if fingers under a cast feel numb or look blue?",
+    options: ["Tell a grown-up right away.", "Put an object inside the cast.", "Wait and see if it goes away."],
+    answer: 0,
+  },
+];
+
 const recoveryQuizHistoryKey = "bone-buddies-recovery-quiz-used";
 const recoveryQuizLength = 3;
 
@@ -3442,11 +3506,21 @@ function shuffleRecoveryQuestions(questions: RecoveryQuestion[]) {
   return shuffled;
 }
 
-function makeRecoveryQuizQuestions(lesson1Completed: boolean, lesson2Completed: boolean) {
-  const pool = [
-    ...(lesson1Completed ? lesson1RecoveryQuestions : []),
-    ...(lesson2Completed ? lesson2RecoveryQuestions : []),
-  ];
+function makeRecoveryQuizQuestions(
+  lesson1Completed: boolean,
+  lesson2Completed: boolean,
+  lesson3Completed: boolean,
+  lesson4Completed: boolean,
+) {
+  const pool = lesson4Completed
+    ? lesson4RecoveryQuestions
+    : lesson3Completed
+      ? lesson3RecoveryQuestions
+      : lesson2Completed
+        ? lesson2RecoveryQuestions
+        : lesson1Completed
+          ? lesson1RecoveryQuestions
+          : [];
   const savedIds = window.localStorage.getItem(recoveryQuizHistoryKey);
   const usedIds: string[] = savedIds ? JSON.parse(savedIds) : [];
   const freshQuestions = pool.filter((question) => !usedIds.includes(question.id));
@@ -3566,10 +3640,6 @@ function DailyQuestion() {
         </div>
       </div>
       <p className="daily-question">{question.question}</p>
-      <BennyReaction
-        expression={selected === null ? "neutral" : isCorrect ? "happy" : "sad"}
-        message={selected === null ? "Pick an answer!" : `${isCorrect ? "Bone-rilliant!" : "Good guess!"} ${question.fact}`}
-      />
       <div className="daily-options">
         {question.options.map((option, index) => {
           const isChosen = selected === index;
@@ -3590,6 +3660,12 @@ function DailyQuestion() {
           );
         })}
       </div>
+      {selected !== null && (
+        <div className={`daily-feedback ${isCorrect ? "success" : "try-again"}`} aria-live="polite">
+          <strong>{isCorrect ? "Bone-rilliant!" : "Good guess!"}</strong>
+          <span>{question.fact}</span>
+        </div>
+      )}
     </section>
   );
 }
@@ -3834,6 +3910,8 @@ function Home({
         xp={xp}
         lesson1Completed={lesson1QuizCompleted}
         lesson2Completed={lesson2FinalQuizScoringCompleted}
+        lesson3Completed={lesson3QuizCompleted}
+        lesson4Completed={lesson4QuizCompleted}
         onSpendXp={onSpendXp}
         onCollectStar={onCollectStar}
         onEarnQuizXp={onEarnQuizXp}
@@ -3969,8 +4047,7 @@ function Home({
               </button>
             </div>
           </div>
-          <div className="banner-mascot">
-            <div className="mini-speech">You’ve got this!</div>
+          <div className="banner-mascot" aria-hidden="true">
             <Mascot small />
           </div>
         </section>
