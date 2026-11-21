@@ -1,6 +1,6 @@
 import { DragEvent, FormEvent, InputHTMLAttributes, ReactNode, useEffect, useRef, useState } from "react";
 
-type Screen = "signin" | "quiz" | "home";
+type Screen = "signin" | "quiz" | "home" | "profile";
 
 type Profile = {
   name: string;
@@ -73,13 +73,15 @@ function BoneLogo({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function Mascot({ small = false }: { small?: boolean }) {
+type BennyExpression = "neutral" | "happy" | "sad";
+
+function Mascot({ small = false, expression = "happy" }: { small?: boolean; expression?: BennyExpression }) {
   return (
     <svg
-      className={small ? "mascot mascot-small" : "mascot"}
+      className={`mascot ${small ? "mascot-small" : ""} mascot-${expression}`}
       viewBox="0 0 210 220"
       role="img"
-      aria-label="Benny, a smiling bone mascot wearing a green cap"
+      aria-label={`Benny, a ${expression === "sad" ? "frowning" : expression === "neutral" ? "waiting" : "smiling"} bone mascot wearing a green cap`}
     >
       <ellipse className="mascot-shadow" cx="107" cy="204" rx="61" ry="11" />
       <path className="mascot-arm" d="M56 112c-20 4-26 16-31 28" />
@@ -91,11 +93,20 @@ function Mascot({ small = false }: { small?: boolean }) {
       <path className="mascot-cap-brim" d="M126 49c17-5 31-2 41 4-9 6-25 7-41 3" />
       <circle className="mascot-eye" cx="83" cy="92" r="5" />
       <circle className="mascot-eye" cx="125" cy="92" r="5" />
-      <path className="mascot-brow" d="M76 82c6-5 12-5 17-1M116 81c6-4 12-3 16 2" />
-      <path className="mascot-mouth" d="M88 110c7 10 24 10 32 0" />
+      <path className="mascot-brow" d={expression === "sad" ? "M76 80c6 4 12 4 17 0M116 82c6 4 12 4 16 0" : "M76 82c6-5 12-5 17-1M116 81c6-4 12-3 16 2"} />
+      <path className="mascot-mouth" d={expression === "sad" ? "M88 120c7-10 24-10 32 0" : expression === "neutral" ? "M88 112h32" : "M88 110c7 10 24 10 32 0"} />
       <path className="mascot-cheek" d="M70 107l8 1M132 108l8-1" />
       <path className="mascot-leg" d="M78 186c-4 10-10 13-19 14M130 186c3 10 10 13 19 14" />
     </svg>
+  );
+}
+
+function BennyReaction({ expression, message }: { expression: BennyExpression; message: string }) {
+  return (
+    <div className={`benny-reaction benny-reaction-${expression}`} role="status" aria-live="polite" aria-label={message}>
+      <p className="benny-speech">{message}</p>
+      <Mascot small expression={expression} />
+    </div>
   );
 }
 
@@ -1137,6 +1148,10 @@ function FractureLesson({
           <section className="fracture-quiz-card">
             <span className="eyebrow">QUICK CHECK · SLIDE {slide + 1}</span>
             <h1>{currentSlide.question}</h1>
+            <BennyReaction
+              expression={selectedAnswer === null ? "neutral" : selectedAnswer === currentSlide.answer ? "happy" : "sad"}
+              message={selectedAnswer === null ? "Pick an answer!" : selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Try again!"}
+            />
             <div className="fracture-quiz-options">
               {currentSlide.options.map((option, index) => (
                 <button
@@ -1150,11 +1165,6 @@ function FractureLesson({
                 </button>
               ))}
             </div>
-            {selectedAnswer !== null && (
-              <p className={`fracture-quiz-feedback ${selectedAnswer === currentSlide.answer ? "correct" : ""}`} aria-live="polite">
-                {selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Let’s try that one again."}
-              </p>
-            )}
             <div className="fracture-actions">
               <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSelectedAnswer(null); }}>← Review slide</button>
               <button className="primary-button" type="button" disabled={selectedAnswer === null} onClick={advanceQuickCheck}>
@@ -1166,6 +1176,10 @@ function FractureLesson({
           <section className="fracture-quiz-card">
             <span className="eyebrow">FINAL QUIZ · QUESTION {finalQuizIndex + 1}</span>
             <h1>{currentFinalQuestion.question}</h1>
+            <BennyReaction
+              expression={!finalQuizFeedback ? "neutral" : selectedAnswer === currentFinalQuestion.answer ? "happy" : "sad"}
+              message={finalQuizFeedback || "Choose your best answer!"}
+            />
             <p className="review-xp-callout">
               {xpWasAlreadyClaimed ? "You’ve already collected XP for this quiz. Replay to practice!" : "First try: 10 XP · Second try: 5 XP · Third try: 1 XP"}
             </p>
@@ -1182,11 +1196,6 @@ function FractureLesson({
                 </button>
               ))}
             </div>
-            {finalQuizFeedback && (
-              <p className={`fracture-quiz-feedback ${selectedAnswer === currentFinalQuestion.answer || answerRevealed ? "correct" : ""}`} aria-live="polite">
-                {finalQuizFeedback}
-              </p>
-            )}
             <div className="fracture-actions">
               <button className="back-button" type="button" onClick={() => { setPhase("learn"); goToSlide(fractureSlides.length - 1); setSelectedAnswer(null); }}>← Review lesson</button>
               <button className="primary-button" type="button" disabled={selectedAnswer === null && !answerRevealed} onClick={advanceFinalQuiz}>
@@ -1503,6 +1512,10 @@ function HealingLesson({
           <section className="fracture-quiz-card">
             <span className="eyebrow">QUICK CHECK · SLIDE {slide + 1}</span>
             <h1>{currentSlide.question}</h1>
+            <BennyReaction
+              expression={selectedAnswer === null ? "neutral" : selectedAnswer === currentSlide.answer ? "happy" : "sad"}
+              message={selectedAnswer === null ? "Pick an answer!" : selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Try again!"}
+            />
             <div className="fracture-quiz-options">
               {currentSlide.options.map((option, index) => (
                 <button
@@ -1516,11 +1529,6 @@ function HealingLesson({
                 </button>
               ))}
             </div>
-            {selectedAnswer !== null && (
-              <p className={`fracture-quiz-feedback ${selectedAnswer === currentSlide.answer ? "correct" : ""}`} aria-live="polite">
-                {selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Let’s try that one again."}
-              </p>
-            )}
             <div className="fracture-actions">
               <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSelectedAnswer(null); }}>← Review slide</button>
               <button className="primary-button" type="button" disabled={selectedAnswer === null} onClick={advanceQuickCheck}>
@@ -1532,6 +1540,10 @@ function HealingLesson({
           <section className="fracture-quiz-card">
             <span className="eyebrow">FINAL QUIZ · QUESTION {finalQuizIndex + 1}</span>
             <h1>{currentFinalQuestion.question}</h1>
+            <BennyReaction
+              expression={!finalQuizFeedback ? "neutral" : selectedAnswer === currentFinalQuestion.answer ? "happy" : "sad"}
+              message={finalQuizFeedback || "Choose your best answer!"}
+            />
             <div className="fracture-quiz-options">
               {currentFinalQuestion.options.map((option, index) => (
                 <button
@@ -1545,9 +1557,6 @@ function HealingLesson({
                 </button>
               ))}
             </div>
-            {finalQuizFeedback && (
-              <p className={`fracture-quiz-feedback ${selectedAnswer === currentFinalQuestion.answer ? "correct" : ""}`} aria-live="polite">{finalQuizFeedback}</p>
-            )}
             <div className="fracture-actions">
               <button className="back-button" type="button" onClick={() => { setPhase("learn"); goToSlide(healingSlides.length - 1); setSelectedAnswer(null); }}>← Review lesson</button>
               <button className="primary-button" type="button" disabled={selectedAnswer === null} onClick={advanceFinalQuiz}>
@@ -1913,6 +1922,10 @@ function CastLesson({
           <section className="fracture-quiz-card">
             <span className="eyebrow">QUICK CHECK · SLIDE {slide + 1}</span>
             <h1>{currentSlide.question}</h1>
+            <BennyReaction
+              expression={selectedAnswer === null ? "neutral" : selectedAnswer === currentSlide.answer ? "happy" : "sad"}
+              message={selectedAnswer === null ? "Pick an answer!" : selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Try again!"}
+            />
             <div className="fracture-quiz-options">
               {currentSlide.options.map((option, index) => (
                 <button
@@ -1926,11 +1939,6 @@ function CastLesson({
                 </button>
               ))}
             </div>
-            {selectedAnswer !== null && (
-              <p className={`fracture-quiz-feedback ${selectedAnswer === currentSlide.answer ? "correct" : ""}`} aria-live="polite">
-                {selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Let’s try that one again."}
-              </p>
-            )}
             <div className="fracture-actions">
               <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSelectedAnswer(null); }}>← Review slide</button>
               <button className="primary-button" type="button" disabled={selectedAnswer === null} onClick={advanceQuickCheck}>
@@ -1942,6 +1950,10 @@ function CastLesson({
           <section className="fracture-quiz-card">
             <span className="eyebrow">FINAL QUIZ · QUESTION {finalQuizIndex + 1}</span>
             <h1>{currentFinalQuestion.question}</h1>
+            <BennyReaction
+              expression={!finalQuizFeedback ? "neutral" : selectedAnswer === currentFinalQuestion.answer ? "happy" : "sad"}
+              message={finalQuizFeedback || "Choose your best answer!"}
+            />
             <p className="review-xp-callout">{xpWasAlreadyClaimed ? "You’ve already collected XP for this quiz. Replay to practice!" : "First try: 10 XP · Second try: 5 XP · Third try: 1 XP"}</p>
             <div className="fracture-quiz-options">
               {currentFinalQuestion.options.map((option, index) => (
@@ -1956,9 +1968,6 @@ function CastLesson({
                 </button>
               ))}
             </div>
-            {finalQuizFeedback && (
-              <p className={`fracture-quiz-feedback ${selectedAnswer === currentFinalQuestion.answer || answerRevealed ? "correct" : ""}`} aria-live="polite">{finalQuizFeedback}</p>
-            )}
             <div className="fracture-actions">
               <button className="back-button" type="button" onClick={() => { setPhase("learn"); goToSlide(castSlides.length - 1); setSelectedAnswer(null); }}>← Review lesson</button>
               <button className="primary-button" type="button" disabled={selectedAnswer === null && !answerRevealed} onClick={advanceFinalQuiz}>
@@ -1973,7 +1982,7 @@ function CastLesson({
 }
 
 const lessons = [
-  { number: "01", title: "Basic bone structure", note: "Meet 14 important bones", tone: "yellow", progress: 0 },
+  { number: "01", title: "Basic bone structure", note: "Meet 15 important bones", tone: "yellow", progress: 0 },
   { number: "02", title: "When bones break", note: "Breaks, fractures & warning signs", tone: "coral", progress: 0 },
   { number: "03", title: "How bones heal", note: "The body's repair process", tone: "blue", progress: 0 },
   { number: "04", title: "Casts & cast care", note: "Types, how casts work & staying safe", tone: "green", progress: 0 },
@@ -1992,6 +2001,10 @@ type Bone = {
 };
 
 const boneFunctions: Record<string, { correct: string; distractors: [string, string] }> = {
+  backbone: {
+    correct: "It helps hold your body upright and lets your back bend and twist.",
+    distractors: ["It protects your brain.", "It helps your fingers bend."],
+  },
   skull: {
     correct: "It protects your brain.",
     distractors: ["It helps your lungs breathe.", "It bends your knee."],
@@ -2051,6 +2064,7 @@ const boneFunctions: Record<string, { correct: string; distractors: [string, str
 };
 
 const bones: Bone[] = [
+  { id: "backbone", name: "Spine (backbone)", region: "Back", description: "Your spine, or backbone, is a row of bones down the middle of your back. It helps hold you upright and lets you bend and twist.", landmark: "down the middle of your back", x: 160, y: 151, imageX: 204, imageY: 292 },
   { id: "skull", name: "Skull", region: "Head", description: "Your skull is a hard helmet that protects your brain.", landmark: "top of your head", x: 160, y: 42, imageX: 203, imageY: 43 },
   { id: "rib-cage", name: "Rib cage", region: "Chest", description: "Your rib cage is a group of curved bones around your chest. It helps protect your heart and lungs.", landmark: "the curved bones around the chest", x: 180, y: 111, imageX: 244, imageY: 232 },
   { id: "sternum", name: "Sternum", region: "Chest", description: "The sternum is one flat bone in the middle of your chest. Your ribs meet it at the front.", landmark: "the flat bone in the middle of the chest", x: 160, y: 120, imageX: 204, imageY: 208 },
@@ -2062,10 +2076,37 @@ const bones: Bone[] = [
   { id: "phalanges", name: "Phalanges", region: "Hand", description: "Phalanges are the bones in your fingers and toes. This map points to the finger bones.", landmark: "the fingers", x: 80, y: 225, imageX: 94, imageY: 468 },
   { id: "femur", name: "Femur", region: "Leg", description: "The femur is your thigh bone. It is the longest and strongest bone in your body.", landmark: "the thigh", x: 146, y: 249, imageX: 243, imageY: 486 },
   { id: "patella", name: "Patella", region: "Knee", description: "The patella is your kneecap. It sits at the front of your knee and helps protect it.", landmark: "the front of the knee", x: 146, y: 279, imageX: 229, imageY: 593 },
-  { id: "fibula", name: "Fibula", region: "Lower leg", description: "The fibula is the thinner bone along the outer side of your lower leg. It sits beside the tibia.", landmark: "the thinner bone on the outer side", x: 185, y: 315, imageX: 237, imageY: 685 },
-  { id: "tibia", name: "Tibia", region: "Lower leg", description: "The tibia is the bigger, strong bone at the front and inner side of your lower leg. It carries lots of your weight.", landmark: "the big shin bone on the inner side", x: 144, y: 315, imageX: 219, imageY: 680 },
+  { id: "fibula", name: "Fibula", region: "Lower leg", description: "The fibula is the thinner bone along the outer side of your lower leg. It sits beside the tibia.", landmark: "the thinner bone on the outer side", x: 190, y: 315, imageX: 237, imageY: 685 },
+  { id: "tibia", name: "Tibia", region: "Lower leg", description: "The tibia is the bigger, strong bone at the front and inner side of your lower leg. It carries lots of your weight.", landmark: "the big shin bone on the inner side", x: 143, y: 315, imageX: 219, imageY: 680 },
   { id: "pelvis", name: "Pelvis", region: "Hips", description: "Your pelvis is a strong group of bones at your hips. It helps support your body and protects organs inside.", landmark: "the hips", x: 160, y: 204, imageX: 203, imageY: 367 },
 ];
+
+const bonePronunciations: Record<string, string> = {
+  backbone: "SPYNE / BACK-bohn",
+  skull: "SKUHL",
+  "rib-cage": "RIB-kayj",
+  sternum: "STUR-num",
+  humerus: "HYOO-muh-rus",
+  radius: "RAY-dee-us",
+  ulna: "UHL-nuh",
+  carpals: "KAR-pulz",
+  metacarpals: "met-uh-KAR-pulz",
+  phalanges: "fuh-LAN-jeez",
+  femur: "FEE-mur",
+  patella: "puh-TEL-uh",
+  fibula: "FIB-yuh-luh",
+  tibia: "TIB-ee-uh",
+  pelvis: "PEL-vis",
+};
+
+const skeletonIntroduction = {
+  title: "Your skeleton (SKEL-uh-tun) helps your whole body",
+  points: [
+    { title: "It supports you", detail: "Your bones help hold you up and keep your body standing tall. This is called posture (POS-chur)." },
+    { title: "It protects you", detail: "Your skull protects your brain. Your ribs help protect your heart and lungs. Organs (OR-gunz) are important parts inside your body." },
+    { title: "It helps you move", detail: "Bones work with your muscles (MUS-uhlz) and joints (JOYNTs) so you can walk, jump, bend, and dance." },
+  ],
+};
 
 function getFunctionChoices(bone: Bone, index: number) {
   const question = boneFunctions[bone.id];
@@ -2162,7 +2203,7 @@ function BoneLesson({
   initialSlide: number;
   onProgress: (progress: LessonProgress) => void;
 }) {
-  const [slide, setSlide] = useState(() => Math.min(Math.max(initialSlide, 0), bones.length - 1));
+  const [slide, setSlide] = useState(() => Math.min(Math.max(initialSlide, 0), bones.length));
   const [phase, setPhase] = useState<"learn" | "question" | "practice" | "final-quiz" | "finished">("learn");
   const [placed, setPlaced] = useState<Set<string>>(() => new Set());
   const [selectedBone, setSelectedBone] = useState<string | null>(null);
@@ -2179,13 +2220,15 @@ function BoneLesson({
   const [reviewXp, setReviewXp] = useState(0);
   const onProgressRef = useRef(onProgress);
   onProgressRef.current = onProgress;
-  const focus = bones[slide];
+  const isIntroduction = slide === 0;
+  const boneIndex = Math.max(slide - 1, 0);
+  const focus = bones[boneIndex];
   const functionQuestion = boneFunctions[focus.id];
-  const functionChoices = getFunctionChoices(focus, slide);
+  const functionChoices = getFunctionChoices(focus, boneIndex);
   const reviewBone = bones[reviewIndex];
   const reviewQuestion = boneFunctions[reviewBone.id];
   const reviewChoices = getFunctionChoices(reviewBone, reviewIndex);
-  const availableBones = bones.slice(0, slide + 1);
+  const availableBones = bones.slice(0, slide);
   const allAvailableBonesPlaced = availableBones.every((bone) => placed.has(bone.id));
   const focusX = focus.imageX / 435.687;
   const focusY = focus.imageY / 841.89;
@@ -2245,8 +2288,30 @@ function BoneLesson({
       const distance = Math.hypot(bone.x - x, bone.y - y);
       return !nearest || distance < nearest.distance ? { bone, distance } : nearest;
     }, null);
+    const nearestNeighborDistance = nearestSpot
+      ? availableBones.reduce((nearest, bone) => {
+          if (bone.id === nearestSpot.bone.id) return nearest;
+          return Math.min(nearest, Math.hypot(bone.x - nearestSpot.bone.x, bone.y - nearestSpot.bone.y));
+        }, Number.POSITIVE_INFINITY)
+      : Number.POSITIVE_INFINITY;
+    const placementTolerance = Math.min(32, nearestNeighborDistance * 0.45);
+    const targetMinimumTolerances: Record<string, number> = {
+      backbone: 28,
+      skull: 28,
+      humerus: 28,
+      ulna: 14,
+      radius: 14,
+      metacarpals: 14,
+      carpals: 14,
+      phalanges: 14,
+      tibia: 28,
+      fibula: 28,
+    };
+    const targetTolerance = nearestSpot
+      ? Math.min(32, Math.max(placementTolerance, targetMinimumTolerances[nearestSpot.bone.id] ?? 0))
+      : placementTolerance;
 
-    if (nearestSpot && nearestSpot.distance <= 20) {
+    if (nearestSpot && nearestSpot.distance <= targetTolerance) {
       placeBone(boneId, nearestSpot.bone.id);
       return;
     }
@@ -2260,7 +2325,7 @@ function BoneLesson({
   }
 
   function goToNextSlide() {
-    if (slide === bones.length - 1) {
+    if (slide === bones.length) {
       setPhase("final-quiz");
       return;
     }
@@ -2312,7 +2377,7 @@ function BoneLesson({
           <span className="finish-badge">✓</span>
           <span className="eyebrow">BONE-RILLIANT WORK!</span>
           <h1>Final quiz complete!</h1>
-          <p>You got {reviewCorrectCount} out of {bones.length} questions right. You learned about 14 bones and helped build Benny’s skeleton.</p>
+          <p>You got {reviewCorrectCount} out of {bones.length} questions right. You explored 15 important bones and helped build Benny’s skeleton.</p>
           <div className="lesson-results-stats">
             <div><strong>{reviewCorrectCount}/{bones.length}</strong><span>correct answers</span></div>
             <div><strong>+{reviewXp} XP</strong><span>{reviewXp ? "added to your account" : "already collected"}</span></div>
@@ -2340,13 +2405,13 @@ function BoneLesson({
         <div className="bone-lesson-heading">
           {phase === "learn" ? (
             <div className="learning-progress">
-              <div className="bone-progress-label"><span>MEET THE BONES</span><strong>{slide + 1} of {bones.length}</strong></div>
-              <div className="bone-progress-track"><span style={{ width: `${((slide + 1) / bones.length) * 100}%` }} /></div>
+              <div className="bone-progress-label"><span>{isIntroduction ? "MEET YOUR SKELETON" : "MEET THE BONES"}</span><strong>{slide + 1} of {bones.length + 1}</strong></div>
+              <div className="bone-progress-track"><span style={{ width: `${((slide + 1) / (bones.length + 1)) * 100}%` }} /></div>
             </div>
           ) : phase === "question" ? (
             <div className="learning-progress">
-              <div className="bone-progress-label"><span>BONE FUNCTION CHECK</span><strong>{slide + 1} of {bones.length}</strong></div>
-              <div className="bone-progress-track"><span style={{ width: `${((slide + 1) / bones.length) * 100}%` }} /></div>
+              <div className="bone-progress-label"><span>BONE FUNCTION CHECK</span><strong>{slide} of {bones.length}</strong></div>
+              <div className="bone-progress-track"><span style={{ width: `${(slide / bones.length) * 100}%` }} /></div>
             </div>
           ) : phase === "final-quiz" ? (
             <div className="bone-progress-label">
@@ -2357,13 +2422,51 @@ function BoneLesson({
               <span className="eyebrow">BODY MAP CHALLENGE</span>
               <h1>Help Benny build his skeleton!</h1>
               <p>Place each bone you’ve learned so far. The current bone is included.</p>
-              <div className="bone-progress-label"><span>{placed.size} of {availableBones.length} bones placed</span><strong>{slide + 1} / {bones.length} slides</strong></div>
+              <div className="bone-progress-label"><span>{placed.size} of {availableBones.length} bones placed</span><strong>{slide} / {bones.length} bones</strong></div>
               <div className="bone-progress-track"><span style={{ width: `${(placed.size / bones.length) * 100}%` }} /></div>
             </>
           )}
         </div>
 
         {phase === "learn" ? (
+          isIntroduction ? (
+            <section className="bone-slide-card">
+              <div className="bone-illustration-panel">
+                <span className="illustration-label">YOUR BODY’S FRAMEWORK</span>
+                <div className="bone-focus-ring">
+                  <img
+                    className="lesson-skeleton-image"
+                    src="/human-skeleton-front-no-labels.svg"
+                    alt="A full human skeleton showing bones that support, protect, and help move the body"
+                  />
+                </div>
+                <a
+                  className="illustration-credit"
+                  href="https://commons.wikimedia.org/wiki/File:Human_skeleton_front_-_no_labels.svg"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Mikael Häggström / LadyofHats · Wikimedia Commons · Public domain
+                </a>
+              </div>
+              <div className="bone-slide-copy bone-intro-copy">
+                <div className="slide-number">WELCOME TO LESSON 1</div>
+                <h2>{skeletonIntroduction.title}</h2>
+                {skeletonIntroduction.points.map((point) => (
+                  <div className="bone-intro-point" key={point.title}>
+                    <strong>{point.title}</strong>
+                    <p>{point.detail}</p>
+                  </div>
+                ))}
+                <div className="bone-slide-actions">
+                  <button className="back-button" type="button" disabled>← Back</button>
+                  <button className="primary-button" type="button" onClick={() => goToSlide(1)}>
+                    Meet the bones <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                  </button>
+                </div>
+              </div>
+            </section>
+          ) : (
           <section className="bone-slide-card">
             <div className="bone-illustration-panel">
               <span className="illustration-label">Look here: {focus.landmark.charAt(0).toUpperCase() + focus.landmark.slice(1)}</span>
@@ -2402,8 +2505,8 @@ function BoneLesson({
               </a>
             </div>
             <div className="bone-slide-copy">
-              <div className="slide-number">BONE {String(slide + 1).padStart(2, "0")}</div>
-              <h2>{focus.name}</h2>
+              <div className="slide-number">BONE {String(slide).padStart(2, "0")}</div>
+              <h2>{focus.name} ({bonePronunciations[focus.id]})</h2>
               <p>{focus.description}</p>
               <div className="bone-location">
                 <Icon><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></Icon>
@@ -2436,11 +2539,16 @@ function BoneLesson({
               </div>
             </div>
           </section>
+          )
         ) : phase === "question" ? (
           <section className="bone-function-card">
             <span className="eyebrow">QUICK CHECK</span>
-            <h1>What does the {focus.name} help do?</h1>
+            <h1>What does the {focus.name} ({bonePronunciations[focus.id]}) help do?</h1>
             <p className="muted">Choose the function that matches what you just learned.</p>
+            <BennyReaction
+              expression={functionAnswer === null ? "neutral" : functionPassed ? "happy" : "sad"}
+              message={feedback || "Pick the answer you think is right!"}
+            />
             <div className="function-options stacked-choices">
               {functionChoices.map((choice, index) => (
                 <ChoiceButton
@@ -2463,11 +2571,6 @@ function BoneLesson({
                 </ChoiceButton>
               ))}
             </div>
-            {feedback && (
-              <p className={`function-feedback ${functionPassed ? "function-correct" : ""}`} role="status">
-                {feedback}
-              </p>
-            )}
             <div className="function-actions">
               <button
                 className="back-button"
@@ -2488,7 +2591,7 @@ function BoneLesson({
                   onClick={() => {
                     setFeedback("");
                     setMapExpression("neutral");
-                    if (slide === bones.length - 1) {
+                    if (slide === bones.length) {
                       setPhase("practice");
                       return;
                     }
@@ -2501,7 +2604,7 @@ function BoneLesson({
                     setPhase("learn");
                   }}
                 >
-                  {slide === bones.length - 1 ? "Body map challenge" : "Next bone"}
+                  {slide === bones.length ? "Body map challenge" : "Next bone"}
                   <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
                 </button>
               )}
@@ -2510,7 +2613,7 @@ function BoneLesson({
         ) : phase === "final-quiz" ? (
           <section className="bone-function-card lesson-review-card">
             <span className="eyebrow">FINAL REVIEW</span>
-            <h1>What does the {reviewBone.name} help do?</h1>
+            <h1>What does the {reviewBone.name} ({bonePronunciations[reviewBone.id]}) help do?</h1>
             <p className="muted">Answer questions about all the bones you learned.</p>
             <div className="review-score-row">
               <span>Question {reviewIndex + 1} of {bones.length}</span>
@@ -2522,6 +2625,10 @@ function BoneLesson({
             <p className="review-xp-callout">
               {xpAlreadyClaimed ? "You’ve already collected XP for this quiz. Replay to practice!" : "A correct first try earns 10 XP, a correct second try earns 5 XP, and a third incorrect try earns 1 XP."}
             </p>
+            <BennyReaction
+              expression={reviewAnswer === null ? "neutral" : reviewPassed ? "happy" : "sad"}
+              message={reviewAnswer === null ? "Choose your best answer!" : reviewPassed ? `That’s right! ${reviewQuestion.correct}` : "Not quite. Give it another try!"}
+            />
             <div className="function-options stacked-choices">
               {reviewChoices.map((choice, index) => (
                 <ChoiceButton
@@ -2557,11 +2664,6 @@ function BoneLesson({
                 </ChoiceButton>
               ))}
             </div>
-            {reviewAnswer !== null && (
-              <p className={`function-feedback ${reviewPassed ? "function-correct" : ""}`} role="status">
-                {reviewPassed ? `That’s right! ${reviewQuestion.correct}` : "Not quite. Give it another try!"}
-              </p>
-            )}
             <div className="function-actions review-actions">
               {reviewPassed && (
                 <button className="primary-button" type="button" onClick={advanceReview}>
@@ -2599,21 +2701,20 @@ function BoneLesson({
                       setSelectedBone(bone.id);
                     }}
                   >
-                    {placed.has(bone.id) ? "✓ " : ""}{bone.name}
+                    <span>{placed.has(bone.id) ? "✓ " : ""}{bone.name}</span>
+                    <small className="bone-chip-pronunciation">{bonePronunciations[bone.id]}</small>
                   </button>
                 ))}
               </div>
               <div className="benny-feedback" aria-live="polite">
-                <span className={`benny-face ${mapExpression === "smile" ? "benny-happy" : ""}`} aria-hidden="true">
-                  {mapExpression === "frown" ? "!" : "✓"}
-                </span>
+                <Mascot small expression={mapExpression === "frown" ? "sad" : mapExpression === "smile" ? "happy" : "neutral"} />
                 <div><strong>Benny says</strong><p>{feedback || (placed.has(focus.id) ? `You already found the ${focus.name}! Benny’s map is smiling.` : `Can you find the ${focus.name}? Pick any name to start.`)}</p></div>
               </div>
               <div className="practice-actions">
                 <button className="back-button" type="button" onClick={() => { setPhase("learn"); setFeedback(""); }}>← Back to {focus.name}</button>
                 {allAvailableBonesPlaced && (
                   <button className="primary-button" type="button" onClick={goToNextSlide}>
-                    {slide === bones.length - 1 ? "Finish lesson" : "Next bone"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                    {slide === bones.length ? "Finish lesson" : "Next bone"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
                   </button>
                 )}
               </div>
@@ -2658,7 +2759,7 @@ function BoneLesson({
                   return (
                     <g
                       key={bone.id}
-                      className={`map-spot ${focus.id === bone.id ? "spot-focus" : ""} ${isPlaced ? "spot-placed" : ""} ${selectedBone === bone.id ? "spot-selected" : ""}`}
+                      className={`map-spot ${focus.id === bone.id ? "spot-focus" : ""} ${isPlaced ? "spot-placed" : ""}`}
                       role="button"
                       tabIndex={0}
                       aria-label={`${bone.name} spot${isPlaced ? ", already filled" : ""}`}
@@ -3398,6 +3499,14 @@ function RecoveryQuiz({ questions, onEarnXp, onClose }: { questions: RecoveryQue
         <>
           <span className="eyebrow recovery-quiz-progress">LESSON REVIEW · {questionIndex + 1} OF {questions.length}</span>
           <h2 id="recovery-quiz-title">{question.question}</h2>
+          <BennyReaction
+            expression={selected === null ? "neutral" : selected === question.answer ? "happy" : "sad"}
+            message={selected === null
+              ? "Pick an answer!"
+              : selected === question.answer
+                ? "Correct! +5 XP"
+                : `Not quite! The correct answer is: ${question.options[question.answer]}`}
+          />
           <div className="recovery-quiz-options">
             {question.options.map((option, index) => (
               <button
@@ -3413,11 +3522,6 @@ function RecoveryQuiz({ questions, onEarnXp, onClose }: { questions: RecoveryQue
           </div>
           {selected !== null && (
             <div className="recovery-quiz-feedback" aria-live="polite">
-              <strong>
-                {selected === question.answer
-                  ? "Correct! +5 XP"
-                  : `Not quite! The correct answer is: ${question.options[question.answer]}`}
-              </strong>
               <button className="game-start-button" type="button" onClick={nextQuestion}>
                 {questionIndex === questions.length - 1 ? "See my score" : "Next question"}
               </button>
@@ -3462,6 +3566,10 @@ function DailyQuestion() {
         </div>
       </div>
       <p className="daily-question">{question.question}</p>
+      <BennyReaction
+        expression={selected === null ? "neutral" : isCorrect ? "happy" : "sad"}
+        message={selected === null ? "Pick an answer!" : `${isCorrect ? "Bone-rilliant!" : "Good guess!"} ${question.fact}`}
+      />
       <div className="daily-options">
         {question.options.map((option, index) => {
           const isChosen = selected === index;
@@ -3482,13 +3590,189 @@ function DailyQuestion() {
           );
         })}
       </div>
-      {selected !== null && (
-        <div className={`daily-feedback ${isCorrect ? "success" : "try-again"}`} aria-live="polite">
-          <strong>{isCorrect ? "Bone-rilliant!" : "Good guess!"}</strong>
-          <span>{question.fact}</span>
-        </div>
-      )}
     </section>
+  );
+}
+
+function ProfilePage({
+  account,
+  profile,
+  onBack,
+  onSave,
+}: {
+  account: Account;
+  profile: Profile;
+  onBack: () => void;
+  onSave: (updatedAccount: Account) => { ok: boolean; message?: string };
+}) {
+  const [firstName, setFirstName] = useState(account.firstName);
+  const [lastName, setLastName] = useState(account.lastName);
+  const [username, setUsername] = useState(account.username);
+  const [email, setEmail] = useState(account.email);
+  const [draftProfile, setDraftProfile] = useState<Profile>({ ...profile });
+  const [message, setMessage] = useState("");
+
+  function toggleArray(field: "sports" | "activities" | "reasonsForJoining", value: string) {
+    const current = draftProfile[field];
+    const optOut = "Opt out";
+    const next = current.includes(value)
+      ? current.filter((item) => item !== value)
+      : value === optOut
+        ? [optOut]
+        : [...current.filter((item) => item !== optOut), value];
+    setDraftProfile({ ...draftProfile, [field]: next });
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const updatedProfile: Profile = {
+      ...draftProfile,
+      name: firstName.trim() || account.firstName,
+    };
+    const result = onSave({
+      ...account,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      username: username.trim(),
+      email: email.trim(),
+      profile: updatedProfile,
+      onboardingCompleted: true,
+    });
+    setMessage(result.ok ? "Your profile has been saved." : result.message ?? "We couldn’t save your profile.");
+  }
+
+  return (
+    <main className="profile-page">
+      <header className="profile-topbar">
+        <button className="lesson-back" type="button" onClick={onBack}>← Back to dashboard</button>
+        <BoneLogo />
+        <span className="profile-header-name">{account.username}</span>
+      </header>
+
+      <div className="profile-shell">
+        <section className="profile-heading">
+          <div className="profile-avatar">{firstName.charAt(0).toUpperCase() || "?"}</div>
+          <div>
+            <span className="eyebrow">MY ACCOUNT</span>
+            <h1>Your profile</h1>
+            <p>Update your account details and questionnaire answers.</p>
+          </div>
+        </section>
+
+        <form className="profile-form" onSubmit={submit}>
+          <section className="profile-card">
+            <div className="profile-card-heading">
+              <span className="profile-card-icon"><Icon><><path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="7" r="4" /></></Icon></span>
+              <div><h2>Account details</h2><p>The basics people and Bone Buddies use to know you.</p></div>
+            </div>
+            <div className="profile-fields">
+              <label>
+                <span>Username</span>
+                <input value={username} onChange={(event) => setUsername(event.target.value)} required autoComplete="username" />
+              </label>
+              <label>
+                <span>First name</span>
+                <input value={firstName} onChange={(event) => setFirstName(event.target.value)} required autoComplete="given-name" />
+              </label>
+              <label>
+                <span>Last name</span>
+                <input value={lastName} onChange={(event) => setLastName(event.target.value)} required autoComplete="family-name" />
+              </label>
+              <label>
+                <span>Email</span>
+                <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" />
+              </label>
+            </div>
+          </section>
+
+          <section className="profile-card questionnaire-card">
+            <div className="profile-card-heading">
+              <span className="profile-card-icon yellow"><Icon><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></Icon></span>
+              <div><h2>My questionnaire</h2><p>Tell us what you enjoy and what helps you learn.</p></div>
+            </div>
+
+            <div className="questionnaire-fields">
+              <label>
+                <span>Grade</span>
+                <select value={draftProfile.grade} onChange={(event) => setDraftProfile({ ...draftProfile, grade: event.target.value })}>
+                  <option value="">Choose a grade</option>
+                  {["Kindergarten", "1st", "2nd", "3rd", "4th", "5th", "6th", "Middle school", "High school"].map((grade) => (
+                    <option key={grade} value={grade}>{grade}</option>
+                  ))}
+                </select>
+              </label>
+
+              <fieldset>
+                <legend>Why did you join?</legend>
+                <div className="profile-option-grid">
+                  {["To learn about bones", "To get better at first aid", "To earn XP and play games", "For a school assignment", "Opt out"].map((reason) => (
+                    <label className="profile-check" key={reason}>
+                      <input type="checkbox" checked={draftProfile.reasonsForJoining.includes(reason)} onChange={() => toggleArray("reasonsForJoining", reason)} />
+                      <span>{reason}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Sports you enjoy</legend>
+                <div className="profile-option-grid">
+                  {[...sports, "Opt out"].map((sport) => (
+                    <label className="profile-check" key={sport}>
+                      <input type="checkbox" checked={draftProfile.sports.includes(sport)} onChange={() => toggleArray("sports", sport)} />
+                      <span>{sport}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Activities you enjoy</legend>
+                <div className="profile-option-grid">
+                  {[...activities, "Opt out"].map((activity) => (
+                    <label className="profile-check" key={activity}>
+                      <input type="checkbox" checked={draftProfile.activities.includes(activity)} onChange={() => toggleArray("activities", activity)} />
+                      <span>{activity}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <label>
+                <span>Do you play an instrument?</span>
+                <select value={draftProfile.playsInstrument} onChange={(event) => setDraftProfile({ ...draftProfile, playsInstrument: event.target.value, instrument: event.target.value === "Yes, I do!" ? draftProfile.instrument : "" })}>
+                  <option value="">Choose an answer</option>
+                  <option>Yes, I do!</option>
+                  <option>Not right now</option>
+                  <option>Opt out</option>
+                </select>
+              </label>
+              {draftProfile.playsInstrument === "Yes, I do!" && (
+                <label>
+                  <span>Instrument</span>
+                  <input value={draftProfile.instrument} onChange={(event) => setDraftProfile({ ...draftProfile, instrument: event.target.value })} placeholder="What do you play?" />
+                </label>
+              )}
+
+              <label>
+                <span>Have you ever been injured?</span>
+                <select value={draftProfile.injury} onChange={(event) => setDraftProfile({ ...draftProfile, injury: event.target.value })}>
+                  <option value="">Choose an answer</option>
+                  {["Yes, once", "Yes, more than once", "Not yet", "Opt out"].map((answer) => (
+                    <option key={answer}>{answer}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <div className="profile-actions">
+            {message && <p className={message.startsWith("Your") ? "profile-save-success" : "profile-save-error"} role="status">{message}</p>}
+            <button className="primary-button" type="submit">Save profile</button>
+          </div>
+        </form>
+      </div>
+    </main>
   );
 }
 
@@ -3510,6 +3794,7 @@ function Home({
   onSpendXp,
   onCollectStar,
   onEarnQuizXp,
+  onOpenProfile,
   onSignOut,
 }: {
   profile: Profile;
@@ -3529,6 +3814,7 @@ function Home({
   onSpendXp: (amount: number) => boolean;
   onCollectStar: (count: number, xpPerStar: number) => void;
   onEarnQuizXp: (amount: number) => void;
+  onOpenProfile: () => void;
   onSignOut: () => void;
 }) {
   const [message, setMessage] = useState("Your bones are living tissue. That means they can fix themselves!");
@@ -3660,7 +3946,7 @@ function Home({
             <Icon size={18} viewBox="0 0 24 24"><path d="M12 22c4.4 0 8-3.6 8-8 0-5-4-9-8-12-1 5-8 7-8 13 0 3.9 3.6 7 8 7Z" /><path d="M9 18c0-3 3-4 3-7 2 2 3 4 3 6a3 3 0 0 1-6 1Z" /></Icon>
             <strong>{streak}</strong><span>day streak</span>
           </div>
-          <button className="avatar" type="button" onClick={onSignOut} title="Sign out">{profile.name.charAt(0).toUpperCase()}</button>
+          <button className="avatar" type="button" onClick={onOpenProfile} title="Open my profile" aria-label="Open my profile">{profile.name.charAt(0).toUpperCase()}</button>
         </div>
       </header>
 
@@ -3834,6 +4120,45 @@ export default function App() {
     );
   }
 
+  if (screen === "profile" && account) {
+    return (
+      <ProfilePage
+        account={account}
+        profile={profile}
+        onBack={() => setScreen("home")}
+        onSave={(updatedAccount) => {
+          try {
+            const accounts = loadAccounts();
+            const usernameKey = updatedAccount.username.trim().toLowerCase();
+            const emailKey = updatedAccount.email.trim().toLowerCase();
+            if (!usernameKey || !updatedAccount.firstName.trim() || !updatedAccount.lastName.trim()) {
+              return { ok: false, message: "Please complete your username and name." };
+            }
+            if (accounts[usernameKey] && accounts[usernameKey].username.toLowerCase() !== account.username.toLowerCase()) {
+              return { ok: false, message: "That username is already taken." };
+            }
+            if (Object.values(accounts).some((savedAccount) =>
+              savedAccount.username.toLowerCase() !== account.username.toLowerCase() &&
+              savedAccount.email.toLowerCase() === emailKey
+            )) {
+              return { ok: false, message: "An account with that email already exists." };
+            }
+            const oldKey = account.username.toLowerCase();
+            if (oldKey !== usernameKey) {
+              delete accounts[oldKey];
+            }
+            saveAccount(updatedAccount, accounts);
+            setAccount(updatedAccount);
+            setProfile(updatedAccount.profile ?? profile);
+            return { ok: true };
+          } catch {
+            return { ok: false, message: "Your profile couldn’t be saved. Please try again." };
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <Home
       profile={profile}
@@ -3914,6 +4239,7 @@ export default function App() {
         saveAccount(updatedAccount, loadAccounts());
         setAccount(updatedAccount);
       }}
+      onOpenProfile={() => setScreen("profile")}
       onSignOut={() => {
         setAccount(null);
         setScreen("signin");
