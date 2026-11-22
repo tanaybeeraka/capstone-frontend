@@ -1,6 +1,6 @@
-import { DragEvent, FormEvent, InputHTMLAttributes, ReactNode, useEffect, useRef, useState } from "react";
+import { createContext, DragEvent, FormEvent, InputHTMLAttributes, ReactNode, useContext, useEffect, useRef, useState } from "react";
 
-type Screen = "signin" | "quiz" | "home" | "profile";
+type Screen = "signin" | "quiz" | "home" | "profile" | "leaderboard";
 
 type Profile = {
   name: string;
@@ -75,19 +75,39 @@ function BoneLogo({ compact = false }: { compact?: boolean }) {
 
 type BennyExpression = "neutral" | "happy" | "sad";
 
-function Mascot({ small = false, expression = "happy" }: { small?: boolean; expression?: BennyExpression }) {
+type BennySkinId = "classic" | "cosmic" | "inferno" | "ocean" | "mint" | "royal" | "dino" | "bee" | "snow" | "rainbow";
+
+const bennySkins: {
+  id: BennySkinId;
+  name: string;
+  description: string;
+  price: number;
+  emoji: string;
+  theme: string;
+}[] = [
+  { id: "classic", name: "Classic Benny", description: "Benny's original bone-bright look.", price: 0, emoji: "⭐", theme: "classic" },
+  { id: "cosmic", name: "Cosmic Comet", description: "Ready to zoom through the galaxy.", price: 250, emoji: "🌙", theme: "cosmic" },
+  { id: "inferno", name: "Firecracker", description: "Bringing the sizzle to every lesson.", price: 400, emoji: "🔥", theme: "inferno" },
+  { id: "ocean", name: "Deep Sea Diver", description: "Cool colors for an undersea explorer.", price: 600, emoji: "🌊", theme: "ocean" },
+  { id: "mint", name: "Mint Chip", description: "Fresh, sweet, and extra chill.", price: 800, emoji: "🍃", theme: "mint" },
+  { id: "royal", name: "Royal Bones", description: "The fanciest bone in the kingdom.", price: 1200, emoji: "👑", theme: "royal" },
+  { id: "dino", name: "Dino Dash", description: "A prehistoric pal with a trail of tiny spikes.", price: 1400, emoji: "🦖", theme: "dino" },
+  { id: "bee", name: "Busy Bee", description: "Benny's buzzing by with wings and stripes.", price: 1600, emoji: "🐝", theme: "bee" },
+  { id: "snow", name: "Snow Day", description: "All bundled up for a frosty adventure.", price: 1800, emoji: "❄️", theme: "snow" },
+  { id: "rainbow", name: "Rainbow Pop", description: "A bright, colorful look for sunny days.", price: 2000, emoji: "🌈", theme: "rainbow" },
+];
+
+const BennySkinContext = createContext<BennySkinId>("classic");
+
+function Mascot({ small = false, expression = "happy", skin = "classic" }: { small?: boolean; expression?: BennyExpression; skin?: BennySkinId }) {
   return (
     <svg
-      className={`mascot ${small ? "mascot-small" : ""} mascot-${expression}`}
+      className={`mascot ${small ? "mascot-small" : ""} mascot-${expression} mascot-skin-${skin}`}
       viewBox="0 0 210 220"
       role="img"
-      aria-label={`Benny, a ${expression === "sad" ? "frowning" : expression === "neutral" ? "waiting" : "smiling"} bone mascot wearing a green cap`}
+      aria-label={`Benny, a ${expression === "sad" ? "frowning" : expression === "neutral" ? "waiting" : "smiling"} bone mascot wearing the ${bennySkins.find((item) => item.id === skin)?.name ?? "Classic Benny"} skin${skin === "cosmic" ? " with a rocket ship" : skin === "ocean" ? " with a surfboard" : skin === "royal" ? " wearing a crown" : skin === "inferno" ? " holding a torch" : skin === "mint" ? " wearing headphones" : skin === "dino" ? " with dinosaur spikes and a tail" : skin === "bee" ? " with bee stripes and wings" : skin === "snow" ? " wearing earmuffs and a scarf" : skin === "rainbow" ? " with a rainbow above his cap" : ""}`}
     >
       <ellipse className="mascot-shadow" cx="107" cy="204" rx="61" ry="11" />
-      <path className="mascot-arm" d="M56 112c-20 4-26 16-31 28" />
-      <path className="mascot-hand" d="M25 140c-1-10 2-14 8-17M25 140c-8-4-10-9-8-14" />
-      <path className="mascot-arm" d="M157 112c22 1 29 13 34 24" />
-      <path className="mascot-hand" d="M191 136c0-10-4-14-9-17M191 136c8-5 9-10 6-15" />
       <path className="mascot-body" d="M71 52c-20-15-36 9-26 25 4 7 10 9 17 9l-5 73c-7 1-13 6-15 13-3 11 5 23 17 23 6 0 11-3 14-7 8 8 20 6 26-2 7 9 19 10 27 2 3 4 8 7 14 7 12 0 20-12 17-23-2-7-8-12-15-13l-5-73c7 0 13-2 17-9 10-16-6-40-26-25-13-11-43-11-57 0Z" />
       <path className="mascot-cap" d="M63 52c9-31 51-37 74-13l-9 13c-16-9-43-10-65 0Z" />
       <path className="mascot-cap-brim" d="M126 49c17-5 31-2 41 4-9 6-25 7-41 3" />
@@ -97,15 +117,96 @@ function Mascot({ small = false, expression = "happy" }: { small?: boolean; expr
       <path className="mascot-mouth" d={expression === "sad" ? "M88 120c7-10 24-10 32 0" : expression === "neutral" ? "M88 112h32" : "M88 110c7 10 24 10 32 0"} />
       <path className="mascot-cheek" d="M70 107l8 1M132 108l8-1" />
       <path className="mascot-leg" d="M78 186c-4 10-10 13-19 14M130 186c3 10 10 13 19 14" />
+      {skin === "cosmic" && (
+        <g aria-hidden="true" className="benny-accessory rocket-accessory">
+          <path d="M12 169c-8 9-7 16-2 22 7-2 12-7 13-15" fill="#ff9a72" stroke="#24394d" strokeWidth="3" strokeLinejoin="round" />
+          <path d="M23 127c-12 15-15 35-5 47 12 2 24-8 28-27 2-10 0-19-3-26-8 0-15 2-20 6Z" fill="#faf7ff" stroke="#24394d" strokeWidth="3.5" strokeLinejoin="round" />
+          <path d="m19 160-12 5 8 12M38 145l12-1-5 16" fill="#ff9a72" stroke="#24394d" strokeWidth="3" strokeLinejoin="round" />
+          <circle cx="31" cy="145" r="5" fill="#8bd8ee" stroke="#24394d" strokeWidth="2.5" />
+          <path d="m22 174-3 9m11-8-1 10" stroke="#ffd76e" strokeWidth="3" strokeLinecap="round" />
+          <path d="m32 128 2-5m6 8 4-3" stroke="#bca7ff" strokeWidth="2.5" strokeLinecap="round" />
+        </g>
+      )}
+      {skin === "ocean" && (
+        <g aria-hidden="true" className="benny-accessory surfboard-accessory">
+          <path d="M178 105c-13 22-18 50-13 74 2 8 7 12 12 11 6-1 9-7 9-15 1-24 0-48-8-70Z" fill="#ffdc70" stroke="#24394d" strokeWidth="3.5" strokeLinejoin="round" />
+          <path d="M169 137c6 3 12 3 18 0M166 151c7 3 14 3 20 0" fill="none" stroke="#2b9bc4" strokeWidth="5" strokeLinecap="round" />
+          <path d="M176 179c-3 1-6 2-9 2" fill="none" stroke="#f1845f" strokeWidth="3" strokeLinecap="round" />
+        </g>
+      )}
+      {skin === "inferno" && (
+        <g aria-hidden="true" className="benny-accessory torch-accessory">
+          <path d="M181 97 187 137" fill="none" stroke="#24394d" strokeWidth="8" strokeLinecap="round" />
+          <path d="M181 97 187 137" fill="none" stroke="#d88948" strokeWidth="4" strokeLinecap="round" />
+          <path d="M171 92c-4-8 2-12 4-17 1 5 4 6 4 10 4-6 4-11 3-16 9 8 13 17 8 24-5 8-15 6-19-1Z" fill="#ff9a4f" stroke="#24394d" strokeWidth="3" strokeLinejoin="round" />
+          <path d="M179 93c-2-4 1-6 3-9 0 3 3 5 1 8-1 2-3 2-4 1Z" fill="#ffe17b" />
+        </g>
+      )}
+      {skin === "mint" && (
+        <g aria-hidden="true" className="benny-accessory headphones-accessory">
+          <path d="M58 84c-3-37 14-63 47-63s50 26 47 63" fill="none" stroke="#24394d" strokeWidth="8" strokeLinecap="round" />
+          <path d="M59 82c-2-35 15-57 46-57s48 22 46 57" fill="none" stroke="#76c995" strokeWidth="4" strokeLinecap="round" />
+          <rect x="51" y="77" width="17" height="31" rx="8" fill="#76c995" stroke="#24394d" strokeWidth="3.5" />
+          <rect x="142" y="77" width="17" height="31" rx="8" fill="#76c995" stroke="#24394d" strokeWidth="3.5" />
+          <path d="M56 87h7m84 0h7" stroke="#f5fff0" strokeWidth="3" strokeLinecap="round" />
+        </g>
+      )}
+      {skin === "royal" && (
+        <g aria-hidden="true" className="benny-accessory crown-accessory">
+          <path d="m65 31-4-25 18 15 26-18 25 18 18-15-4 25Z" fill="#ffd65d" stroke="#24394d" strokeWidth="3.5" strokeLinejoin="round" />
+          <path d="M65 31h79v8H65z" fill="#f3b93f" stroke="#24394d" strokeWidth="3.5" strokeLinejoin="round" />
+          <circle cx="78" cy="25" r="3.5" fill="#f1845f" />
+          <circle cx="105" cy="22" r="4" fill="#8ad6ee" />
+          <circle cx="132" cy="25" r="3.5" fill="#c996e7" />
+        </g>
+      )}
+      {skin === "dino" && (
+        <g aria-hidden="true" className="benny-accessory dino-accessory">
+          <path d="m64 61 9-16 9 13 10-17 10 15 11-17 10 17 10-12 8 18" fill="#a5d957" stroke="#315c3a" strokeWidth="3.5" strokeLinejoin="round" />
+          <path d="M151 158c13-2 23 3 30 12-10 2-17 7-22 15-7-8-10-17-8-27Z" fill="#7fc84c" stroke="#315c3a" strokeWidth="3.5" strokeLinejoin="round" />
+        </g>
+      )}
+      {skin === "bee" && (
+        <g aria-hidden="true" className="benny-accessory bee-accessory">
+          <path d="M66 111c-20-20-31-13-29-1 2 10 14 15 28 13M144 111c20-20 31-13 29-1-2 10-14 15-28 13" fill="#f7fcff" stroke="#34485a" strokeWidth="3.5" />
+          <path d="M72 138c20 8 42 8 64 0M73 151c20 8 40 8 61 0M76 164c17 7 36 7 55 0" fill="none" stroke="#edbd42" strokeWidth="6" strokeLinecap="round" />
+          <path d="M67 52c10-20 24-29 39-29 18 0 34 12 43 31" fill="none" stroke="#f2c94c" strokeWidth="4" strokeLinecap="round" />
+        </g>
+      )}
+      {skin === "snow" && (
+        <g aria-hidden="true" className="benny-accessory snow-accessory">
+          <path d="M58 84c-3-37 14-63 47-63s50 26 47 63" fill="none" stroke="#34485a" strokeWidth="8" strokeLinecap="round" />
+          <path d="M59 82c-2-35 15-57 46-57s48 22 46 57" fill="none" stroke="#a9d8f4" strokeWidth="4" strokeLinecap="round" />
+          <circle cx="59" cy="91" r="10" fill="#8ec9ef" stroke="#34485a" strokeWidth="3" />
+          <circle cx="151" cy="91" r="10" fill="#8ec9ef" stroke="#34485a" strokeWidth="3" />
+          <path d="M66 132c18 9 57 9 76 0v13H66z" fill="#f1845f" stroke="#34485a" strokeWidth="3" strokeLinejoin="round" />
+          <path d="m133 142 12 8-7 19-12-8Z" fill="#f1845f" stroke="#34485a" strokeWidth="3" strokeLinejoin="round" />
+          <path d="M77 138h10m10 0h10m10 0h10" stroke="#fff4dd" strokeWidth="3" strokeLinecap="round" />
+        </g>
+      )}
+      {skin === "rainbow" && (
+        <g aria-hidden="true" className="benny-accessory rainbow-accessory" fill="none" strokeLinecap="round">
+          <path d="M58 55c8-32 26-46 48-46s40 14 48 46" stroke="#ef6c71" strokeWidth="8" />
+          <path d="M65 56c7-25 21-36 41-36s34 11 41 36" stroke="#f6b94a" strokeWidth="7" />
+          <path d="M73 56c6-18 17-26 33-26s27 8 33 26" stroke="#65bd81" strokeWidth="7" />
+          <path d="M81 56c5-12 13-17 25-17s20 5 25 17" stroke="#62a9db" strokeWidth="6" />
+          <path d="m45 54 3-6m-7 14 7-1m115-7 3-6m-2 15 7 1" stroke="#f5c955" strokeWidth="3" />
+        </g>
+      )}
+      <path className="mascot-arm" d="M60 110c-17 0-25 7-33 17-6 7-9 13-12 18" />
+      <path className="mascot-hand" d="M25 140c-1-10 2-14 8-17M25 140c-8-4-10-9-8-14" />
+      <path className="mascot-arm" d="M150 110c17 0 25 7 33 16 4 5 7 8 11 10" />
+      <path className="mascot-hand" d="M191 136c0-10-4-14-9-17M191 136c8-5 9-10 6-15" />
     </svg>
   );
 }
 
 function BennyReaction({ expression, message }: { expression: BennyExpression; message: string }) {
+  const skin = useContext(BennySkinContext);
   return (
     <div className={`benny-reaction benny-reaction-${expression}`} role="status" aria-live="polite" aria-label={message}>
       <p className="benny-speech">{message}</p>
-      <Mascot small expression={expression} />
+      <Mascot small expression={expression} skin={skin} />
     </div>
   );
 }
@@ -124,6 +225,8 @@ type Account = {
   profile?: Profile;
   onboardingCompleted?: boolean;
   xp?: number;
+  ownedSkins?: BennySkinId[];
+  equippedSkin?: BennySkinId;
   lesson1QuizCompleted?: boolean;
   lesson2QuizCompleted?: boolean;
   lesson2FinalQuizCompleted?: boolean;
@@ -133,7 +236,31 @@ type Account = {
   lessonProgress?: LessonProgress;
 };
 
+type GameDifficulty = "easy" | "hard";
+
+type LeaderboardEntry = {
+  username: string;
+  difficulty: GameDifficulty;
+  stars: number;
+  achievedAt: number;
+};
+
 const accountsKey = "bone-buddies-accounts";
+const leaderboardKey = "bone-buddies-leaderboard";
+
+function loadLeaderboard(): LeaderboardEntry[] {
+  const saved = window.localStorage.getItem(leaderboardKey);
+  if (!saved) return [];
+  const entries: unknown = JSON.parse(saved);
+  if (!Array.isArray(entries)) return [];
+  return entries.filter((entry): entry is LeaderboardEntry =>
+    typeof entry?.username === "string" &&
+    (entry.difficulty === "easy" || entry.difficulty === "hard") &&
+    Number.isInteger(entry.stars) &&
+    entry.stars >= 0 &&
+    Number.isFinite(entry.achievedAt)
+  );
+}
 
 function loadAccounts(): Record<string, Account> {
   const saved = window.localStorage.getItem(accountsKey);
@@ -2825,6 +2952,7 @@ function BoneBeatGame({
   onSpendXp,
   onCollectStar,
   onEarnQuizXp,
+  onRecordRun,
   onExit,
 }: {
   xp: number;
@@ -2835,6 +2963,7 @@ function BoneBeatGame({
   onSpendXp: (amount: number) => boolean;
   onCollectStar: (count: number, xpPerStar: number) => void;
   onEarnQuizXp: (amount: number) => void;
+  onRecordRun: (difficulty: GameDifficulty, stars: number) => boolean;
   onExit: () => void;
 }) {
   const [active, setActive] = useState(false);
@@ -2843,16 +2972,20 @@ function BoneBeatGame({
   const [recoveryQuizQuestions, setRecoveryQuizQuestions] = useState<RecoveryQuestion[]>([]);
   const [difficulty, setDifficulty] = useState<"easy" | "hard">("easy");
   const [distance, setDistance] = useState(0);
+  const [recordSaved, setRecordSaved] = useState<boolean | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const heldDirections = useRef(new Set<string>());
   const player = useRef({ x: 0, y: 0, angle: 0 });
   const runStart = useRef(0);
   const seed = useRef(0);
+  const hardGapOffsets = useRef(new Map<number, number[]>());
   const collectedStars = useRef(new Set<string>());
   const collectedStarCount = useRef(0);
   const [starsCollected, setStarsCollected] = useState(0);
   const collectStarRef = useRef(onCollectStar);
   collectStarRef.current = onCollectStar;
+  const recordRunRef = useRef(onRecordRun);
+  recordRunRef.current = onRecordRun;
   const hasCompletedLessons = lesson1Completed || lesson2Completed || lesson3Completed || lesson4Completed;
 
   function openRecoveryQuiz() {
@@ -2868,10 +3001,12 @@ function BoneBeatGame({
 
   function startRun() {
     seed.current = Math.floor(Math.random() * 1_000_000);
+    hardGapOffsets.current.clear();
     player.current = { x: 0, y: 0, angle: 0 };
     heldDirections.current.clear();
     collectedStars.current.clear();
     collectedStarCount.current = 0;
+    setRecordSaved(null);
     setStarsCollected(0);
     setDistance(0);
     setDead(false);
@@ -2914,6 +3049,27 @@ function BoneBeatGame({
       let value = Math.imul(tx + 127 + seed.current * 19, 374761393) + Math.imul(ty + 311, 668265263) + item * 2246822519;
       value = Math.imul(value ^ (value >>> 13), 1274126177);
       return ((value ^ (value >>> 16)) >>> 0) / 4294967296;
+    }
+
+    function getGapStart(column: number, verticalChunk: number) {
+      if (difficulty !== "hard") {
+        return verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
+      }
+
+      let offsets = hardGapOffsets.current.get(verticalChunk);
+      if (!offsets) {
+        offsets = [Math.floor(tileRandom(0, verticalChunk, 47) * 7)];
+        hardGapOffsets.current.set(verticalChunk, offsets);
+      }
+      while (offsets.length <= column) {
+        const previous = offsets[offsets.length - 1];
+        const nextOptions = [previous - 6, previous - 5, previous - 4, previous - 3, previous + 3, previous + 4, previous + 5, previous + 6]
+          .filter((offset) => offset >= 0 && offset <= 6);
+        const choice = Math.floor(tileRandom(offsets.length, verticalChunk, 49) * nextOptions.length);
+        offsets.push(nextOptions[choice]);
+      }
+
+      return verticalChunk * 12 + 2 + offsets[column];
     }
 
     function getBarrierLaneX(barrierX: number, lane: number) {
@@ -3089,7 +3245,7 @@ function BoneBeatGame({
         const lastVerticalChunk = Math.floor(lastLane / 12) + 1;
         if (hasStar) {
           for (let verticalChunk = firstVerticalChunk; verticalChunk <= lastVerticalChunk; verticalChunk += 1) {
-            const gapStart = verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
+            const gapStart = getGapStart(column, verticalChunk);
             const starCount = difficulty === "hard" ? 7 : 3;
             for (let starIndex = 0; starIndex < starCount; starIndex += 1) {
               const starId = `barrier-${column}-${verticalChunk}-${starIndex}`;
@@ -3101,7 +3257,7 @@ function BoneBeatGame({
         }
         for (let lane = firstLane; lane <= lastLane; lane += 1) {
           const verticalChunk = Math.floor(lane / 12);
-          const gapStart = verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
+          const gapStart = getGapStart(column, verticalChunk);
           if (lane === gapStart || lane === gapStart + 1) continue;
           const boneY = lane * barrierLaneSpacing + barrierLaneSpacing / 2;
           const rotation = (tileRandom(column, lane, 51) - 0.5) * 0.48;
@@ -3136,7 +3292,7 @@ function BoneBeatGame({
         const lane = Math.floor(player.current.y / barrierLaneSpacing);
         for (let nearbyLane = lane - 1; nearbyLane <= lane + 1; nearbyLane += 1) {
           const verticalChunk = Math.floor(nearbyLane / 12);
-          const gapStart = verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
+          const gapStart = getGapStart(column, verticalChunk);
           if (nearbyLane === gapStart || nearbyLane === gapStart + 1) continue;
           const boneY = nearbyLane * barrierLaneSpacing + barrierLaneSpacing / 2;
           if (Math.abs(player.current.x - getBarrierLaneX(barrierX, nearbyLane)) < 33 && Math.abs(player.current.y - boneY) < 25) {
@@ -3169,7 +3325,7 @@ function BoneBeatGame({
       const currentVerticalChunk = Math.floor(player.current.y / (12 * barrierLaneSpacing));
       for (let column = Math.max(0, nearbyBarrier - 1); column <= nearbyBarrier + 1; column += 1) {
         for (let verticalChunk = currentVerticalChunk - 1; verticalChunk <= currentVerticalChunk + 1; verticalChunk += 1) {
-          const gapStart = verticalChunk * 12 + 2 + Math.floor(tileRandom(column, verticalChunk, 47) * 7);
+          const gapStart = getGapStart(column, verticalChunk);
           const starCount = difficulty === "hard" ? 7 : 3;
           for (let starIndex = 0; starIndex < starCount; starIndex += 1) {
             const starId = `barrier-${column}-${verticalChunk}-${starIndex}`;
@@ -3194,6 +3350,7 @@ function BoneBeatGame({
         setActive(false);
         setDead(true);
         setDistance(Math.floor((now - runStart.current) / 1000));
+        setRecordSaved(recordRunRef.current(difficulty, collectedStarCount.current));
         return;
       }
       if (now - lastHudUpdate > 200) {
@@ -3301,6 +3458,7 @@ function BoneBeatGame({
               <span className="game-overlay-icon"><BoneSymbol className="game-overlay-bone" /></span>
               <h2 id="game-over-title">Bone collision!</h2>
               <p>You survived for {distance} seconds on {difficulty}. Spend 10 XP for another life, or save your XP for later.</p>
+              {recordSaved === false && <small role="alert">Your run couldn’t be saved to the leaderboard. Please check browser storage.</small>}
               <div className="game-death-actions">
                 {xp >= 10 && <button className="game-start-button" type="button" onClick={useAnotherLife}>Use another life · 10 XP</button>}
                 <button className="game-save-button" type="button" onClick={onExit}>Save my XP &amp; head home</button>
@@ -3670,6 +3828,69 @@ function DailyQuestion() {
   );
 }
 
+function LeaderboardPage({ entries, error, onBack }: { entries: LeaderboardEntry[]; error: string; onBack: () => void }) {
+  const [difficulty, setDifficulty] = useState<GameDifficulty>("easy");
+  const rankedEntries = entries
+    .filter((entry) => entry.difficulty === difficulty)
+    .sort((a, b) => b.stars - a.stars || a.achievedAt - b.achievedAt)
+    .slice(0, 20);
+
+  return (
+    <main className="leaderboard-page">
+      <header className="leaderboard-topbar">
+        <button className="lesson-back" type="button" onClick={onBack}>← Back to dashboard</button>
+        <BoneLogo />
+        <span className="leaderboard-mark">🏆 TOP 20</span>
+      </header>
+      <div className="leaderboard-shell">
+        <section className="leaderboard-hero">
+          <span className="leaderboard-cup" aria-hidden="true">🏆</span>
+          <span className="eyebrow">THE BONEYARD HALL OF FAME</span>
+          <h1>Star chasers</h1>
+          <p>Who collected the most stars in a single Bone Bonanza run?</p>
+        </section>
+        <section className="leaderboard-card">
+          <div className="leaderboard-tabs" role="tablist" aria-label="Leaderboard difficulty">
+            {(["easy", "hard"] as const).map((level) => (
+              <button
+                className={`leaderboard-tab ${difficulty === level ? "selected" : ""}`}
+                type="button"
+                role="tab"
+                aria-selected={difficulty === level}
+                key={level}
+                onClick={() => setDifficulty(level)}
+              >
+                {level === "easy" ? "🌱 Easy" : "💀 Hard"}
+              </button>
+            ))}
+          </div>
+          <div className="leaderboard-column-labels"><span>RANK</span><span>PLAYER</span><span>STARS</span></div>
+          {error ? (
+            <p className="leaderboard-error" role="alert">{error}</p>
+          ) : rankedEntries.length ? (
+            <ol className="leaderboard-list">
+              {rankedEntries.map((entry, index) => (
+                <li className={`leaderboard-row ${index < 3 ? `leaderboard-rank-${index + 1}` : ""}`} key={`${entry.username}-${entry.achievedAt}`}>
+                  <span className="leaderboard-rank">{index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`}</span>
+                  <span className="leaderboard-player"><span className="leaderboard-player-avatar">{entry.username.charAt(0).toUpperCase()}</span><strong>{entry.username}</strong></span>
+                  <span className="leaderboard-score"><strong>{entry.stars}</strong><small>★</small></span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <div className="leaderboard-empty">
+              <span aria-hidden="true">⭐</span>
+              <strong>No {difficulty} scores yet!</strong>
+              <p>Play Bone Bonanza and collect stars to claim a spot here.</p>
+            </div>
+          )}
+          <p className="leaderboard-footnote">Each player’s best single-run star total is shown. Scores are saved in this browser.</p>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 function ProfilePage({
   account,
   profile,
@@ -3852,10 +4073,93 @@ function ProfilePage({
   );
 }
 
+function ShopPage({
+  xp,
+  ownedSkins,
+  equippedSkin,
+  onBack,
+  onBuySkin,
+  onEquipSkin,
+}: {
+  xp: number;
+  ownedSkins: BennySkinId[];
+  equippedSkin: BennySkinId;
+  onBack: () => void;
+  onBuySkin: (skinId: BennySkinId) => { ok: boolean; message: string };
+  onEquipSkin: (skinId: BennySkinId) => { ok: boolean; message: string };
+}) {
+  const [notice, setNotice] = useState("");
+
+  function handleSkin(skin: typeof bennySkins[number]) {
+    const result = ownedSkins.includes(skin.id) ? onEquipSkin(skin.id) : onBuySkin(skin.id);
+    setNotice(result.message);
+  }
+
+  return (
+    <main className="shop-page">
+      <header className="shop-topbar">
+        <button className="lesson-back" type="button" onClick={onBack}>← Back to dashboard</button>
+        <BoneLogo />
+        <div className="shop-xp"><span aria-hidden="true">✦</span> {xp} XP</div>
+      </header>
+
+      <div className="shop-shell">
+        <section className="shop-hero">
+          <div className="shop-hero-copy">
+            <span className="eyebrow">BENNY'S STYLE LAB</span>
+            <h1>Give Benny a glow-up!</h1>
+            <p>Trade your hard-earned XP for a fresh new look. Pick a favorite, then wear it on your next adventure.</p>
+            <div className="shop-wallet"><span aria-hidden="true">✦</span><strong>{xp} XP</strong><small>ready to spend</small></div>
+          </div>
+          <div className="shop-hero-mascot"><span className="shop-sparkle sparkle-one">✦</span><span className="shop-sparkle sparkle-two">✧</span><Mascot skin={equippedSkin} /></div>
+        </section>
+
+        <div className="shop-title-row">
+          <div><span className="eyebrow">THE BONE BOUTIQUE</span><h2>Choose your Benny</h2></div>
+          <span className="shop-owned-count">{ownedSkins.length} / {bennySkins.length} collected</span>
+        </div>
+        {notice && <p className="shop-notice" role="status">{notice}</p>}
+
+        <section className="skin-grid" aria-label="Benny skins">
+          {bennySkins.map((skin) => {
+            const owned = ownedSkins.includes(skin.id);
+            const equipped = equippedSkin === skin.id;
+            const canAfford = xp >= skin.price;
+            return (
+              <article className={`skin-card skin-card-${skin.theme}`} key={skin.id}>
+                <div className="skin-art">
+                  <span className="skin-emoji" aria-hidden="true">{skin.emoji}</span>
+                  <Mascot small skin={skin.id} />
+                  {equipped && <span className="skin-equipped-tag">Wearing</span>}
+                </div>
+                <div className="skin-info">
+                  <div className="skin-name-row"><h3>{skin.name}</h3>{owned && <span className="skin-owned-tag">Owned</span>}</div>
+                  <p>{skin.description}</p>
+                  <button
+                    className={`skin-action ${equipped ? "skin-action-equipped" : ""}`}
+                    type="button"
+                    disabled={equipped || (!owned && !canAfford)}
+                    onClick={() => handleSkin(skin)}
+                  >
+                    {equipped ? "Equipped ✓" : owned ? "Wear this skin" : <><span aria-hidden="true">✦</span> {skin.price} XP</>}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+        <p className="shop-footnote">Earn XP by completing lessons and playing games. Your skins stay yours when you sign out!</p>
+      </div>
+    </main>
+  );
+}
+
 function Home({
   profile,
   streak,
   xp,
+  ownedSkins,
+  equippedSkin,
   lesson1QuizCompleted,
   lesson2FinalQuizScoringCompleted,
   lesson3QuizCompleted,
@@ -3870,12 +4174,18 @@ function Home({
   onSpendXp,
   onCollectStar,
   onEarnQuizXp,
+  onRecordRun,
   onOpenProfile,
+  onOpenLeaderboard,
+  onBuySkin,
+  onEquipSkin,
   onSignOut,
 }: {
   profile: Profile;
   streak: number;
   xp: number;
+  ownedSkins: BennySkinId[];
+  equippedSkin: BennySkinId;
   lesson1QuizCompleted: boolean;
   lesson2FinalQuizScoringCompleted: boolean;
   lesson3QuizCompleted: boolean;
@@ -3890,7 +4200,11 @@ function Home({
   onSpendXp: (amount: number) => boolean;
   onCollectStar: (count: number, xpPerStar: number) => void;
   onEarnQuizXp: (amount: number) => void;
+  onRecordRun: (difficulty: GameDifficulty, stars: number) => boolean;
   onOpenProfile: () => void;
+  onOpenLeaderboard: () => void;
+  onBuySkin: (skinId: BennySkinId) => { ok: boolean; message: string };
+  onEquipSkin: (skinId: BennySkinId) => { ok: boolean; message: string };
   onSignOut: () => void;
 }) {
   const [message, setMessage] = useState("Your bones are living tissue. That means they can fix themselves!");
@@ -3902,7 +4216,21 @@ function Home({
   ]);
   const [activeLesson, setActiveLesson] = useState<number | null>(null);
   const [showGame, setShowGame] = useState(false);
+  const [showShop, setShowShop] = useState(false);
   const [resumeProgress, setResumeProgress] = useState(false);
+
+  if (showShop) {
+    return (
+      <ShopPage
+        xp={xp}
+        ownedSkins={ownedSkins}
+        equippedSkin={equippedSkin}
+        onBack={() => setShowShop(false)}
+        onBuySkin={onBuySkin}
+        onEquipSkin={onEquipSkin}
+      />
+    );
+  }
 
   if (showGame) {
     return (
@@ -3915,6 +4243,7 @@ function Home({
         onSpendXp={onSpendXp}
         onCollectStar={onCollectStar}
         onEarnQuizXp={onEarnQuizXp}
+        onRecordRun={onRecordRun}
         onExit={() => setShowGame(false)}
       />
     );
@@ -4024,6 +4353,13 @@ function Home({
             <Icon size={18} viewBox="0 0 24 24"><path d="M12 22c4.4 0 8-3.6 8-8 0-5-4-9-8-12-1 5-8 7-8 13 0 3.9 3.6 7 8 7Z" /><path d="M9 18c0-3 3-4 3-7 2 2 3 4 3 6a3 3 0 0 1-6 1Z" /></Icon>
             <strong>{streak}</strong><span>day streak</span>
           </div>
+          <button className="shop-nav-button" type="button" onClick={() => setShowShop(true)} aria-label="Open Benny's shop">
+            <Icon><><path d="M3 8h18l-1.5 13h-15L3 8Z" /><path d="M8 9V6a4 4 0 0 1 8 0v3" /></></Icon>
+            <span>Shop</span>
+          </button>
+          <button className="leaderboard-nav-button" type="button" onClick={onOpenLeaderboard} aria-label="Open leaderboard">
+            <span aria-hidden="true">🏆</span><span>Leaderboard</span>
+          </button>
           <button className="avatar" type="button" onClick={onOpenProfile} title="Open my profile" aria-label="Open my profile">{profile.name.charAt(0).toUpperCase()}</button>
         </div>
       </header>
@@ -4048,7 +4384,7 @@ function Home({
             </div>
           </div>
           <div className="banner-mascot" aria-hidden="true">
-            <Mascot small />
+            <Mascot small skin={equippedSkin} />
           </div>
         </section>
 
@@ -4138,6 +4474,8 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>("signin");
   const [profile, setProfile] = useState<Profile>(initialProfile);
   const [account, setAccount] = useState<Account | null>(null);
+  const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardError, setLeaderboardError] = useState("");
   const [streakData, setStreakData] = useState<{ count: number; lastActiveDate: string }>(() => {
     const savedStreak = window.localStorage.getItem("bone-buddies-streak");
     return savedStreak ? JSON.parse(savedStreak) : { count: 0, lastActiveDate: "" };
@@ -4182,18 +4520,20 @@ export default function App() {
 
   if (screen === "quiz") {
     return (
-      <Questionnaire
-        profile={profile}
-        setProfile={setProfile}
-        onDone={() => {
-          if (account) {
-            const updatedAccount = { ...account, profile, onboardingCompleted: true };
-            saveAccount(updatedAccount, loadAccounts());
-            setAccount(updatedAccount);
-          }
-          setScreen("home");
-        }}
-      />
+      <BennySkinContext.Provider value={account?.equippedSkin ?? "classic"}>
+        <Questionnaire
+          profile={profile}
+          setProfile={setProfile}
+          onDone={() => {
+            if (account) {
+              const updatedAccount = { ...account, profile, onboardingCompleted: true };
+              saveAccount(updatedAccount, loadAccounts());
+              setAccount(updatedAccount);
+            }
+            setScreen("home");
+          }}
+        />
+      </BennySkinContext.Provider>
     );
   }
 
@@ -4236,11 +4576,18 @@ export default function App() {
     );
   }
 
+  if (screen === "leaderboard") {
+    return <LeaderboardPage entries={leaderboardEntries} error={leaderboardError} onBack={() => setScreen("home")} />;
+  }
+
   return (
-    <Home
-      profile={profile}
-      streak={streakData.count}
-      xp={account?.xp ?? 0}
+    <BennySkinContext.Provider value={account?.equippedSkin ?? "classic"}>
+      <Home
+        profile={profile}
+        streak={streakData.count}
+        xp={account?.xp ?? 0}
+        ownedSkins={account?.ownedSkins ?? ["classic"]}
+        equippedSkin={account?.equippedSkin ?? "classic"}
       lesson1QuizCompleted={account?.lesson1QuizCompleted ?? false}
       lesson2FinalQuizScoringCompleted={account?.lesson2FinalQuizScoringCompleted ?? false}
       lesson3QuizCompleted={account?.lesson3QuizCompleted ?? false}
@@ -4304,6 +4651,44 @@ export default function App() {
         setAccount(updatedAccount);
         return true;
       }}
+      onBuySkin={(skinId) => {
+        const skin = bennySkins.find((item) => item.id === skinId);
+        if (!account || !skin) return { ok: false, message: "We couldn’t complete that purchase." };
+        try {
+          const accounts = loadAccounts();
+          const currentAccount = accounts[account.username.toLowerCase()] ?? account;
+          const ownedSkins = currentAccount.ownedSkins ?? ["classic"];
+          if (ownedSkins.includes(skinId)) return { ok: false, message: "You already own this Benny skin." };
+          if ((currentAccount.xp ?? 0) < skin.price) return { ok: false, message: "You need more XP for this skin." };
+          const updatedAccount: Account = {
+            ...currentAccount,
+            xp: (currentAccount.xp ?? 0) - skin.price,
+            ownedSkins: [...ownedSkins, skinId],
+            equippedSkin: skinId,
+          };
+          saveAccount(updatedAccount, accounts);
+          setAccount(updatedAccount);
+          return { ok: true, message: `${skin.name} unlocked and equipped! Benny looks bone-rilliant.` };
+        } catch {
+          return { ok: false, message: "Your purchase couldn’t be saved. Please try again." };
+        }
+      }}
+      onEquipSkin={(skinId) => {
+        if (!account) return { ok: false, message: "Please sign in again to change Benny’s look." };
+        try {
+          const accounts = loadAccounts();
+          const currentAccount = accounts[account.username.toLowerCase()] ?? account;
+          const ownedSkins = currentAccount.ownedSkins ?? ["classic"];
+          if (!ownedSkins.includes(skinId)) return { ok: false, message: "Unlock this skin before wearing it." };
+          const updatedAccount: Account = { ...currentAccount, equippedSkin: skinId };
+          saveAccount(updatedAccount, accounts);
+          setAccount(updatedAccount);
+          const skinName = bennySkins.find((skin) => skin.id === skinId)?.name ?? "Benny's new look";
+          return { ok: true, message: `${skinName} equipped. Benny is ready for an adventure!` };
+        } catch {
+          return { ok: false, message: "Benny’s look couldn’t be saved. Please try again." };
+        }
+      }}
       onCollectStar={(count, xpPerStar) => {
         if (!account) return;
         const updatedAccount = { ...account, xp: (account.xp ?? 0) + count * xpPerStar };
@@ -4316,11 +4701,47 @@ export default function App() {
         saveAccount(updatedAccount, loadAccounts());
         setAccount(updatedAccount);
       }}
-      onOpenProfile={() => setScreen("profile")}
-      onSignOut={() => {
-        setAccount(null);
-        setScreen("signin");
+      onRecordRun={(difficulty, stars) => {
+        if (!account) return false;
+        try {
+          const entries = loadLeaderboard();
+          const updatedEntries = [...entries, {
+            username: account.username,
+            difficulty,
+            stars,
+            achievedAt: Date.now(),
+          }];
+          const topEntries = (["easy", "hard"] as const).flatMap((level) =>
+            updatedEntries
+              .filter((entry) => entry.difficulty === level)
+              .sort((a, b) => b.stars - a.stars || a.achievedAt - b.achievedAt)
+              .slice(0, 20)
+          );
+          window.localStorage.setItem(leaderboardKey, JSON.stringify(topEntries));
+          setLeaderboardEntries(topEntries);
+          setLeaderboardError("");
+          return true;
+        } catch {
+          return false;
+        }
       }}
-    />
+      onOpenProfile={() => setScreen("profile")}
+      onOpenLeaderboard={() => {
+        try {
+          setLeaderboardEntries(loadLeaderboard());
+          setLeaderboardError("");
+          setScreen("leaderboard");
+        } catch {
+          setLeaderboardEntries([]);
+          setLeaderboardError("Leaderboard scores couldn’t be loaded from this browser. Check browser storage and try again.");
+          setScreen("leaderboard");
+        }
+      }}
+        onSignOut={() => {
+          setAccount(null);
+          setScreen("signin");
+        }}
+      />
+    </BennySkinContext.Provider>
   );
 }
