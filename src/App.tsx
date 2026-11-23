@@ -99,6 +99,37 @@ const bennySkins: {
 
 const BennySkinContext = createContext<BennySkinId>("classic");
 
+function createBennyGameArtwork(skin: BennySkinId) {
+  const palettes: Record<BennySkinId, { body: string; cap: string; brim: string }> = {
+    classic: { body: "#fffdf5", cap: "#32b697", brim: "#237d69" },
+    cosmic: { body: "#e8ddff", cap: "#7653c8", brim: "#4a328b" },
+    inferno: { body: "#ffe0c4", cap: "#f06a4f", brim: "#bd3b3d" },
+    ocean: { body: "#c9f1ff", cap: "#3296c5", brim: "#17668f" },
+    mint: { body: "#e2f5c9", cap: "#69c894", brim: "#37845e" },
+    royal: { body: "#fff0b5", cap: "#a26acb", brim: "#684493" },
+    dino: { body: "#d6f29a", cap: "#71b94d", brim: "#477d3e" },
+    bee: { body: "#fff1a8", cap: "#f0c744", brim: "#be8e2f" },
+    snow: { body: "#e4f5ff", cap: "#8ec9ef", brim: "#4c92c0" },
+    rainbow: { body: "#ffe4ef", cap: "#f184a5", brim: "#c75283" },
+  };
+  const colors = palettes[skin];
+  const accessories: Partial<Record<BennySkinId, string>> = {
+    cosmic: '<circle cx="27" cy="68" r="3" fill="#bca7ff"/><circle cx="175" cy="91" r="3" fill="#8bd8ee"/><path d="M22 131c-11 13-9 29 1 36 11-2 17-11 18-25" fill="#faf7ff" stroke="#24394d" stroke-width="4"/><path d="m23 155-11 5 8 9m15-22 11-2-5 14" fill="#ff9a72" stroke="#24394d" stroke-width="3"/>',
+    inferno: '<path d="M155 114 177 138" stroke="#d88948" stroke-width="6" stroke-linecap="round"/><path d="M164 113c-6-10 2-15 4-24 2 6 6 8 6 13 5-7 5-14 3-20 12 10 16 21 9 31-6 8-17 8-22 0Z" fill="#ff9a4f" stroke="#24394d" stroke-width="3"/><path d="M173 113c-3-5 2-8 4-11 0 4 3 6 1 10-1 2-3 3-5 1Z" fill="#ffe17b"/>',
+    ocean: '<path d="M176 106c-15 25-18 54-12 77 2 9 8 13 14 12 7-2 10-8 10-17 1-25-1-51-12-72Z" fill="#ffdc70" stroke="#24394d" stroke-width="4"/><path d="M167 141q10 6 20 0m-21 17q11 6 22 0" fill="none" stroke="#2b9bc4" stroke-width="5"/>',
+    mint: '<path d="M58 84c-3-37 14-63 47-63s50 26 47 63" fill="none" stroke="#24394d" stroke-width="9"/><path d="M59 82c-2-35 15-57 46-57s48 22 46 57" fill="none" stroke="#76c995" stroke-width="5"/><rect x="51" y="77" width="18" height="32" rx="9" fill="#76c995" stroke="#24394d" stroke-width="4"/><rect x="141" y="77" width="18" height="32" rx="9" fill="#76c995" stroke="#24394d" stroke-width="4"/>',
+    royal: '<path d="m65 34-4-27 19 17 25-20 25 20 19-17-4 27Z" fill="#ffd65d" stroke="#24394d" stroke-width="4" stroke-linejoin="round"/><path d="M65 34h80v9H65Z" fill="#f3b93f" stroke="#24394d" stroke-width="4"/><circle cx="79" cy="28" r="4" fill="#f1845f"/><circle cx="105" cy="25" r="4" fill="#8ad6ee"/><circle cx="131" cy="28" r="4" fill="#c996e7"/>',
+    dino: '<path d="m64 61 9-16 9 13 10-17 10 15 11-17 10 17 10-12 8 18" fill="#a5d957" stroke="#315c3a" stroke-width="4" stroke-linejoin="round"/><path d="M151 158c13-2 23 3 30 12-10 2-17 7-22 15-7-8-10-17-8-27Z" fill="#7fc84c" stroke="#315c3a" stroke-width="4"/>',
+    bee: '<path d="M66 111c-20-20-31-13-29-1 2 10 14 15 28 13m79-12c20-20 31-13 29-1-2 10-14 15-28 13" fill="#f7fcff" stroke="#34485a" stroke-width="4"/><path d="M72 138q32 12 64 0m-63 14q31 12 61 0m-58 14q28 10 55 0" fill="none" stroke="#edbd42" stroke-width="7" stroke-linecap="round"/>',
+    snow: '<path d="M58 84c-3-37 14-63 47-63s50 26 47 63" fill="none" stroke="#34485a" stroke-width="9"/><path d="M59 82c-2-35 15-57 46-57s48 22 46 57" fill="none" stroke="#a9d8f4" stroke-width="5"/><circle cx="59" cy="91" r="11" fill="#8ec9ef" stroke="#34485a" stroke-width="4"/><circle cx="151" cy="91" r="11" fill="#8ec9ef" stroke="#34485a" stroke-width="4"/><path d="M66 133q38 12 76 0v14H66Z" fill="#f1845f" stroke="#34485a" stroke-width="3"/>',
+    rainbow: '<path d="M58 55c8-32 26-46 48-46s40 14 48 46" fill="none" stroke="#ef6c71" stroke-width="8"/><path d="M65 56c7-25 21-36 41-36s34 11 41 36" fill="none" stroke="#f6b94a" stroke-width="7"/><path d="M73 56c6-18 17-26 33-26s27 8 33 26" fill="none" stroke="#65bd81" stroke-width="6"/><path d="M81 56c5-12 13-17 25-17s20 5 25 17" fill="none" stroke="#62a9db" stroke-width="5"/>',
+  };
+  const accessory = accessories[skin] ?? "";
+
+  const artwork = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 220"><ellipse cx="107" cy="204" rx="61" ry="11" fill="#24394d" opacity=".18"/><path d="M71 52c-20-15-36 9-26 25 4 7 10 9 17 9l-5 73c-7 1-13 6-15 13-3 11 5 23 17 23 6 0 11-3 14-7 8 8 20 6 26-2 7 9 19 10 27 2 3 4 8 7 14 7 12 0 20-12 17-23-2-7-8-12-15-13l-5-73c7 0 13-2 17-9 10-16-6-40-26-25-13-11-43-11-57 0Z" fill="${colors.body}" stroke="#24394d" stroke-width="5" stroke-linejoin="round"/><path d="M63 52c9-31 51-37 74-13l-9 13c-16-9-43-10-65 0Z" fill="${colors.cap}" stroke="#24394d" stroke-width="5" stroke-linejoin="round"/><path d="M126 49c17-5 31-2 41 4-9 6-25 7-41 3" fill="${colors.brim}" stroke="#24394d" stroke-width="5" stroke-linejoin="round"/>${accessory}<circle cx="83" cy="92" r="5" fill="#24394d"/><circle cx="125" cy="92" r="5" fill="#24394d"/><path d="M76 82c6-5 12-5 17-1m23 0c6-4 12-3 16 2M88 110c7 10 24 10 32 0M70 107l8 1m54 0 8-1" fill="none" stroke="#24394d" stroke-width="4" stroke-linecap="round"/><path d="M60 110c-17 0-25 7-33 17-6 7-9 13-12 18m135-35c17 0 25 7 33 16 4 5 7 8 11 10M25 140c-1-10 2-14 8-17m-8 17c-8-4-10-9-8-14m174 10c0-10-4-14-9-17m9 17c8-5 9-10 6-15M78 186c-4 10-10 13-19 14m71-14c3 10 10 13 19 14" fill="none" stroke="#24394d" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(artwork)}`;
+}
+
 function Mascot({ small = false, expression = "happy", skin = "classic" }: { small?: boolean; expression?: BennyExpression; skin?: BennySkinId }) {
   return (
     <svg
@@ -246,7 +277,7 @@ type LeaderboardEntry = {
 };
 
 const accountsKey = "bone-buddies-accounts";
-const leaderboardKey = "bone-buddies-leaderboard";
+const leaderboardKey = "bone-buddies-leaderboard-v2";
 
 function loadLeaderboard(): LeaderboardEntry[] {
   const saved = window.localStorage.getItem(leaderboardKey);
@@ -2966,6 +2997,7 @@ function BoneBeatGame({
   onRecordRun: (difficulty: GameDifficulty, stars: number) => boolean;
   onExit: () => void;
 }) {
+  const equippedSkin = useContext(BennySkinContext);
   const [active, setActive] = useState(false);
   const [dead, setDead] = useState(false);
   const [showRecoveryQuiz, setShowRecoveryQuiz] = useState(false);
@@ -3020,11 +3052,15 @@ function BoneBeatGame({
     const foundContext = canvas.getContext("2d");
     if (!foundContext) return;
     const context: CanvasRenderingContext2D = foundContext;
+    const bennyImage = new Image();
+    bennyImage.onload = () => drawMap(performance.now());
+    bennyImage.src = createBennyGameArtwork(equippedSkin);
 
     const tileSize = 360;
     const barrierSpacing = 390;
     const barrierLaneSpacing = 76;
     const playerRadius = 13;
+    const hardBoneYOffsets = new Map<string, number[]>();
     let frame = 0;
     let lastFrame = performance.now();
     let lastHudUpdate = lastFrame;
@@ -3063,7 +3099,7 @@ function BoneBeatGame({
       }
       while (offsets.length <= column) {
         const previous = offsets[offsets.length - 1];
-        const nextOptions = [previous - 6, previous - 5, previous - 4, previous - 3, previous + 3, previous + 4, previous + 5, previous + 6]
+        const nextOptions = [previous - 6, previous - 5, previous - 4, previous + 4, previous + 5, previous + 6]
           .filter((offset) => offset >= 0 && offset <= 6);
         const choice = Math.floor(tileRandom(offsets.length, verticalChunk, 49) * nextOptions.length);
         offsets.push(nextOptions[choice]);
@@ -3074,11 +3110,30 @@ function BoneBeatGame({
 
     function getBarrierLaneX(barrierX: number, lane: number) {
       if (difficulty === "hard") {
-        const stagger = [-34, 28, -16, 40][((lane % 4) + 4) % 4];
-        return barrierX + stagger;
+        const column = Math.round(barrierX / barrierSpacing) - 1;
+        return barrierX + (tileRandom(column, lane, 53) - 0.5) * 230;
       }
       if (difficulty !== "easy") return barrierX;
       return barrierX + (lane % 2 === 0 ? -56 : 56);
+    }
+
+    function getBarrierBoneY(column: number, lane: number) {
+      const baseY = lane * barrierLaneSpacing + barrierLaneSpacing / 2;
+      if (difficulty !== "hard") return baseY;
+
+      const verticalChunk = Math.floor(lane / 12);
+      const key = `${column}:${verticalChunk}`;
+      let offsets = hardBoneYOffsets.get(key);
+      if (!offsets) {
+        offsets = Array.from({ length: 12 }, (_, index) => (index - 5.5) * 12);
+        for (let index = offsets.length - 1; index > 0; index -= 1) {
+          const swapIndex = Math.floor(tileRandom(column, verticalChunk, 61 + index) * (index + 1));
+          [offsets[index], offsets[swapIndex]] = [offsets[swapIndex], offsets[index]];
+        }
+        hardBoneYOffsets.set(key, offsets);
+      }
+
+      return baseY + offsets[((lane % 12) + 12) % 12];
     }
 
     function getStarPosition(barrierX: number, verticalChunk: number, gapStart: number, starIndex: number) {
@@ -3147,35 +3202,11 @@ function BoneBeatGame({
       context.save();
       context.translate(x, y);
       context.rotate(angle);
-      context.shadowColor = "#314b2b55";
-      context.shadowBlur = 12;
-      context.fillStyle = "#243d32";
-      context.beginPath();
-      context.ellipse(0, 1, 19, 23, 0, 0, Math.PI * 2);
-      context.fill();
-      context.shadowBlur = 0;
-      context.strokeStyle = "#fff4d1";
-      context.lineWidth = 4;
-      context.lineCap = "round";
-      context.beginPath();
-      context.moveTo(0, -7); context.lineTo(0, 11);
-      context.moveTo(-9, -4); context.quadraticCurveTo(0, -9, 9, -4);
-      context.moveTo(-9, 2); context.quadraticCurveTo(0, -3, 9, 2);
-      context.moveTo(-9, 8); context.quadraticCurveTo(0, 3, 9, 8);
-      context.moveTo(-8, -3); context.lineTo(-14, 5);
-      context.moveTo(8, -3); context.lineTo(14, 5);
-      context.moveTo(-6, 12); context.lineTo(-9, 19);
-      context.moveTo(6, 12); context.lineTo(9, 19);
-      context.stroke();
-      context.fillStyle = "#fff4d1";
-      context.beginPath();
-      context.arc(0, -14, 10, 0, Math.PI * 2);
-      context.fill();
-      context.fillStyle = "#26392e";
-      context.beginPath();
-      context.arc(-3.5, -15, 1.8, 0, Math.PI * 2);
-      context.arc(3.5, -15, 1.8, 0, Math.PI * 2);
-      context.fill();
+      if (bennyImage.complete && bennyImage.naturalWidth > 0) {
+        context.shadowColor = "#314b2b55";
+        context.shadowBlur = 8;
+        context.drawImage(bennyImage, -34, -36, 68, 72);
+      }
       context.restore();
     }
 
@@ -3221,11 +3252,11 @@ function BoneBeatGame({
               context.beginPath();
               context.arc(px, py, speck, 0, Math.PI * 2);
               context.fill();
-            } else if (difficulty === "hard") {
+            } else if (difficulty === "hard" && item >= 5) {
               const boneX = tx * tileSize + 28 + randomX * (tileSize - 56);
               const boneY = ty * tileSize + 28 + randomY * (tileSize - 56);
               const rotation = tileRandom(tx, ty, item * 11 + 4) * Math.PI;
-              const size = 0.72 + tileRandom(tx, ty, item * 11 + 5) * 0.55;
+              const size = 0.62 + tileRandom(tx, ty, item * 11 + 5) * 0.35;
               const boneColor = ["#f1e2bd", "#e7d6ad", "#f6ebd0"][Math.floor(tileRandom(tx, ty, item * 11 + 6) * 3)];
               drawBone(boneX - cameraX, boneY - cameraY, rotation, size, boneColor);
             }
@@ -3258,10 +3289,11 @@ function BoneBeatGame({
         for (let lane = firstLane; lane <= lastLane; lane += 1) {
           const verticalChunk = Math.floor(lane / 12);
           const gapStart = getGapStart(column, verticalChunk);
-          if (lane === gapStart || lane === gapStart + 1) continue;
-          const boneY = lane * barrierLaneSpacing + barrierLaneSpacing / 2;
-          const rotation = (tileRandom(column, lane, 51) - 0.5) * 0.48;
-          drawBone(getBarrierLaneX(barrierX, lane) - cameraX, boneY - cameraY, rotation, 1.02, "#f2e5c4");
+          if (lane >= gapStart && lane <= gapStart + (difficulty === "hard" ? 2 : 1)) continue;
+          const boneY = getBarrierBoneY(column, lane);
+          const rotation = (tileRandom(column, lane, 51) - 0.5) * 1.2;
+          const size = difficulty === "hard" ? 0.82 + tileRandom(column, lane, 57) * 0.4 : 1.02;
+          drawBone(getBarrierLaneX(barrierX, lane) - cameraX, boneY - cameraY, rotation, size, "#f2e5c4");
         }
       }
 
@@ -3275,10 +3307,10 @@ function BoneBeatGame({
       const directions = heldDirections.current;
       const horizontal = Number(directions.has("right")) - Number(directions.has("left"));
       const vertical = Number(directions.has("down")) - Number(directions.has("up"));
-      const velocityX = (difficulty === "hard" ? 420 : 280) + horizontal * (difficulty === "hard" ? 140 : 110);
-      const velocityY = vertical * (difficulty === "hard" ? 280 : 250);
+      const velocityX = (difficulty === "hard" ? 390 : 280) + horizontal * (difficulty === "hard" ? 135 : 110);
+      const velocityY = vertical * 250;
       const magnitude = Math.hypot(velocityX, velocityY);
-      const speedLimit = difficulty === "hard" ? 540 : 360;
+      const speedLimit = difficulty === "hard" ? 500 : 360;
       const scale = magnitude > speedLimit ? speedLimit / magnitude : 1;
       player.current.x += velocityX * scale * delta;
       player.current.y += velocityY * scale * delta;
@@ -3293,8 +3325,8 @@ function BoneBeatGame({
         for (let nearbyLane = lane - 1; nearbyLane <= lane + 1; nearbyLane += 1) {
           const verticalChunk = Math.floor(nearbyLane / 12);
           const gapStart = getGapStart(column, verticalChunk);
-          if (nearbyLane === gapStart || nearbyLane === gapStart + 1) continue;
-          const boneY = nearbyLane * barrierLaneSpacing + barrierLaneSpacing / 2;
+          if (nearbyLane >= gapStart && nearbyLane <= gapStart + (difficulty === "hard" ? 2 : 1)) continue;
+          const boneY = getBarrierBoneY(column, nearbyLane);
           if (Math.abs(player.current.x - getBarrierLaneX(barrierX, nearbyLane)) < 33 && Math.abs(player.current.y - boneY) < 25) {
             collision = true;
             break;
@@ -3308,7 +3340,7 @@ function BoneBeatGame({
         const tileY = Math.floor(player.current.y / tileSize);
         for (let tx = tileX - 1; tx <= tileX + 1 && !collision; tx += 1) {
           for (let ty = tileY - 1; ty <= tileY + 1 && !collision; ty += 1) {
-            for (let item = 4; item < 7; item += 1) {
+            for (let item = 5; item < 7; item += 1) {
               const randomX = tileRandom(tx, ty, item * 3 + 1);
               const randomY = tileRandom(tx, ty, item * 3 + 2);
               const boneX = tx * tileSize + 28 + randomX * (tileSize - 56);
@@ -3342,7 +3374,7 @@ function BoneBeatGame({
       }
       if (foundStars > 0) {
         setStarsCollected(collectedStarCount.current);
-        collectStarRef.current(foundStars, difficulty === "easy" ? 1 : 10);
+        collectStarRef.current(foundStars, difficulty === "easy" ? 1 : 5);
       }
       drawMap(now);
       if (collision) {
@@ -3365,7 +3397,7 @@ function BoneBeatGame({
       window.cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [active, difficulty]);
+  }, [active, difficulty, equippedSkin]);
 
   useEffect(() => {
     const keyboardDirections: Record<string, string> = {
@@ -3422,20 +3454,20 @@ function BoneBeatGame({
         <div className="game-heading">
           <span className="eyebrow">THE BONEYARD</span>
           <h1>Bone Bonanza</h1>
-          <p>{difficulty === "hard" ? "Hard run: scattered bones, tighter dodges, faster Benny." : "Keep moving east through the field. Dodge the bones for as long as you can."}</p>
+          <p>{difficulty === "hard" ? "Hard run: scattered bones, wider gaps, and a faster pace." : "Keep moving east through the field. Dodge the bones for as long as you can."}</p>
         </div>
         <div className={`bone-map-wrap ${active ? "map-running" : ""}`}>
           <canvas ref={canvasRef} className="bone-map-canvas" aria-label="Top-down map with Benny surrounded by scattered bones" />
           <div className="game-hud">
             <span className="game-score">TIME <strong>{distance}s</strong></span>
-            <span className="game-stars">STARS <strong>{starsCollected}</strong> · +{difficulty === "easy" ? 1 : 10} XP EACH</span>
+            <span className="game-stars">STARS <strong>{starsCollected}</strong> · +{difficulty === "easy" ? 1 : 5} XP EACH</span>
             <span className="map-direction-hint">AUTO-RUN → · STEER WITH WASD OR ARROWS</span>
           </div>
           {!active && !dead && (
             <div className="game-overlay">
               <span className="game-overlay-icon" aria-hidden="true"><Icon><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" /></Icon></span>
               <h2>Choose your boneyard</h2>
-              <p>Both runs cost 10 XP to enter. Collect stars for {difficulty === "easy" ? 1 : 10} XP each.</p>
+              <p>Both runs cost 10 XP to enter. Collect stars for {difficulty === "easy" ? 1 : 5} XP each.</p>
               <div className="difficulty-options">
                 <button className={`difficulty-option ${difficulty === "easy" ? "selected" : ""}`} type="button" aria-pressed={difficulty === "easy"} onClick={() => setDifficulty("easy")}>
                   <strong>Easy</strong><small>Bone rows · steady speed</small>
