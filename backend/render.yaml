@@ -1,0 +1,19 @@
+# Render Blueprint. In Render: New → Blueprint → pick this repo.
+# You'll be prompted for the secrets marked sync: false.
+services:
+  - type: web
+    name: bone-buddies-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

@@ -1,0 +1,15 @@
+function required(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable ${name}`);
+  return value;
+}
+
+export const config = {
+  databaseUrl: required("DATABASE_URL"),
+  jwtSecret: required("JWT_SECRET"),
+  port: Number(process.env.PORT ?? 3000),
+  corsOrigins: (process.env.CORS_ORIGIN ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+};

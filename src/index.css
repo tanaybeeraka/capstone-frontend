@@ -749,3 +749,22 @@ aside { display: grid; align-content: start; gap: 18px; }
 @media (prefers-reduced-motion: reduce) {
   .game-start-button, .game-shortcut-button { transition: none; }
 }
+
+/* Bone Bonanza game modal */
+.game-modal { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 34px 16px 16px; }
+.game-modal-backdrop { position: absolute; inset: 0; overflow: hidden; background: radial-gradient(circle at 50% 45%, #3f5a3acc, #16241bf2 70%); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.game-modal-rays { position: absolute; left: 50%; top: 50%; width: 220vmax; height: 220vmax; margin: -110vmax 0 0 -110vmax; background: repeating-conic-gradient(from 0deg, #fff3c914 0deg 10deg, transparent 10deg 20deg); -webkit-mask-image: radial-gradient(circle, #000 0, transparent 45%); mask-image: radial-gradient(circle, #000 0, transparent 45%); animation: game-modal-spin 40s linear infinite; }
+@keyframes game-modal-spin { to { transform: rotate(360deg); } }
+.game-modal-frame { position: relative; width: min(1100px, 100%); max-height: calc(100dvh - 50px); display: flex; border: 5px solid #f8f2d9; border-radius: 30px; background: #e8e4cf; box-shadow: 0 10px 0 #a8a184, 0 30px 80px #0008; outline: none; }
+.game-modal-panel { flex: 1; min-width: 0; overflow: auto; border-radius: 25px; overscroll-behavior: contain; }
+.game-modal .bone-field-page { min-height: 0; }
+.game-modal .game-topbar { border-radius: 25px 25px 0 0; }
+.game-modal .game-topbar .lesson-back { visibility: hidden; }
+.game-modal .game-shell { margin: 20px auto 28px; }
+.game-modal-ribbon { position: absolute; z-index: 2; top: -24px; left: 50%; translate: -50% 0; display: inline-flex; align-items: center; gap: 8px; padding: 8px 20px; border: 4px solid #f8f2d9; border-radius: 999px; background: #e9a93a; color: #3b2a0c; font-family: "Fredoka", sans-serif; font-size: 1.1rem; font-weight: 700; letter-spacing: .02em; white-space: nowrap; box-shadow: 0 5px 0 #a8742299; pointer-events: none; }
+.game-modal-ribbon-bone { width: 22px; height: 22px; fill: currentColor; stroke: currentColor; stroke-width: 1; }
+.game-modal-close { position: absolute; z-index: 2; top: -18px; right: -14px; width: 48px; height: 48px; display: grid; place-items: center; border: 4px solid #f8f2d9; border-radius: 50%; background: #d9534f; color: #fff; cursor: pointer; box-shadow: 0 5px 0 #8f2f2c; }
+.game-modal-close svg { stroke-width: 3; }
+.game-modal-close:focus-visible { outline: 3px solid #fff3c9; outline-offset: 3px; }
+@media (max-width: 640px) { .game-modal-close { right: -6px; } .game-modal-frame { border-radius: 24px; } }
+@media (prefers-reduced-motion: reduce) { .game-modal-rays { animation: none; } }

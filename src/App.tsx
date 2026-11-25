@@ -1,3 +1,4 @@
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createContext, DragEvent, FormEvent, InputHTMLAttributes, ReactNode, useContext, useEffect, useRef, useState } from "react";
 
 type Screen = "signin" | "quiz" | "home" | "profile" | "leaderboard";
@@ -2974,6 +2975,97 @@ const dailyQuestions = [
   },
 ];
 
+function GameModal({ open, onClose, children }: { open: boolean; onClose: () => void; children: ReactNode }) {
+  const reduceMotion = useReducedMotion();
+  const frameRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+    requestAnimationFrame(() => frameRef.current?.focus({ preventScroll: true }));
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onCloseRef.current();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+      previousFocus?.focus?.({ preventScroll: true });
+    };
+  }, [open]);
+
+  const pop = reduceMotion
+    ? { type: "tween" as const, duration: 0.15 }
+    : { type: "spring" as const, bounce: 0.42, visualDuration: 0.45 };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <div className="game-modal" role="presentation">
+          <motion.div
+            className="game-modal-backdrop"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.2 } }}
+            transition={{ duration: 0.25 }}
+          >
+            <div className="game-modal-rays" aria-hidden="true" />
+          </motion.div>
+          <motion.div
+            ref={frameRef}
+            tabIndex={-1}
+            className="game-modal-frame"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Bone Bonanza"
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.35, y: 140, rotate: -7 }}
+            animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.8, y: 50, transition: { duration: 0.18, ease: "easeIn" } }}
+            transition={{ ...pop, opacity: { duration: 0.15 } }}
+          >
+            <motion.div
+              className="game-modal-ribbon"
+              aria-hidden="true"
+              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.2, y: 20, rotate: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0, rotate: -2 }}
+              transition={{ ...pop, delay: reduceMotion ? 0 : 0.18 }}
+            >
+              <BoneSymbol className="game-modal-ribbon-bone" /> Game time!
+            </motion.div>
+            <motion.button
+              className="game-modal-close"
+              type="button"
+              aria-label="Close game"
+              onClick={onClose}
+              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0, rotate: -180 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ ...pop, delay: reduceMotion ? 0 : 0.26 }}
+              whileHover={reduceMotion ? undefined : { scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Icon><path d="M6 6l12 12M18 6 6 18" /></Icon>
+            </motion.button>
+            <div className="game-modal-panel">
+              <motion.div
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: "spring", bounce: 0.2, visualDuration: 0.4, delay: reduceMotion ? 0 : 0.12 }}
+              >
+                {children}
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function BoneBeatGame({
   xp,
   lesson1Completed,
@@ -3068,10 +3160,10 @@ function BoneBeatGame({
     let height = 0;
 
     const resize = () => {
-      const bounds = canvas.getBoundingClientRect();
+      // clientWidth/Height ignore CSS transforms, so the size stays correct while the modal scales in.
       const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-      width = bounds.width;
-      height = bounds.height;
+      width = canvas.clientWidth;
+      height = canvas.clientHeight;
       canvas.width = Math.round(width * pixelRatio);
       canvas.height = Math.round(height * pixelRatio);
       context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -4264,23 +4356,6 @@ function Home({
     );
   }
 
-  if (showGame) {
-    return (
-      <BoneBeatGame
-        xp={xp}
-        lesson1Completed={lesson1QuizCompleted}
-        lesson2Completed={lesson2FinalQuizScoringCompleted}
-        lesson3Completed={lesson3QuizCompleted}
-        lesson4Completed={lesson4QuizCompleted}
-        onSpendXp={onSpendXp}
-        onCollectStar={onCollectStar}
-        onEarnQuizXp={onEarnQuizXp}
-        onRecordRun={onRecordRun}
-        onExit={() => setShowGame(false)}
-      />
-    );
-  }
-
   if (activeLesson === 0) {
     return (
       <BoneLesson
@@ -4373,6 +4448,7 @@ function Home({
   }
 
   return (
+    <>
     <main className="home-page">
       <header className="home-nav">
         <BoneLogo />
@@ -4499,6 +4575,21 @@ function Home({
         </section>
       </div>
     </main>
+      <GameModal open={showGame} onClose={() => setShowGame(false)}>
+        <BoneBeatGame
+          xp={xp}
+          lesson1Completed={lesson1QuizCompleted}
+          lesson2Completed={lesson2FinalQuizScoringCompleted}
+          lesson3Completed={lesson3QuizCompleted}
+          lesson4Completed={lesson4QuizCompleted}
+          onSpendXp={onSpendXp}
+          onCollectStar={onCollectStar}
+          onEarnQuizXp={onEarnQuizXp}
+          onRecordRun={onRecordRun}
+          onExit={() => setShowGame(false)}
+        />
+      </GameModal>
+    </>
   );
 }
 
