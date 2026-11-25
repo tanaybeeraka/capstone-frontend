@@ -25,6 +25,20 @@ const initialProfile: Profile = {
   reasonsForJoining: [],
 };
 
+function normalizeProfile(profile: Profile): Profile {
+  const cleanAnswers = (answers: string[]) => answers.filter((answer) => answer !== "Opt out");
+  return {
+    ...profile,
+    grade: profile.grade === "Opt out" ? "" : profile.grade,
+    sports: cleanAnswers(profile.sports),
+    injury: profile.injury === "Opt out" ? "" : profile.injury,
+    activities: cleanAnswers(profile.activities),
+    playsInstrument: profile.playsInstrument === "Opt out" ? "" : profile.playsInstrument,
+    instrument: profile.playsInstrument === "Opt out" ? "" : profile.instrument,
+    reasonsForJoining: cleanAnswers(profile.reasonsForJoining),
+  };
+}
+
 const sports = ["Soccer", "Basketball", "Gymnastics", "Baseball", "Skating", "Swimming", "Other"];
 const activities = ["Biking", "Climbing", "Dancing", "Running", "Scootering", "Playground", "Other"];
 
@@ -563,14 +577,13 @@ function Questionnaire({
       helper: "What grade are you in?",
       content: (
         <div className="grade-grid">
-          {["1st", "2nd", "3rd", "4th", "5th", "6th", "Other", "Opt out"].map((grade) => (
+          {["1st", "2nd", "3rd", "4th", "5th", "6th", "Other"].map((grade) => (
             <ChoiceButton key={grade} active={profile.grade === grade} onClick={() => setProfile({ ...profile, grade })}>
-              {grade === "Other" || grade === "Opt out" ? grade : `${grade} grade`}
+              {grade === "Other" ? grade : `${grade} grade`}
             </ChoiceButton>
           ))}
         </div>
       ),
-      valid: Boolean(profile.grade),
     },
     {
       kicker: "YOUR BONE BUDDIES STORY",
@@ -583,7 +596,6 @@ function Questionnaire({
             "It’s part of my school curriculum",
             "I broke a bone and want to learn about it",
             "Other",
-            "Opt out",
           ].map((reason) => (
             <ChoiceButton
               key={reason}
@@ -594,9 +606,7 @@ function Questionnaire({
                   ...profile,
                   reasonsForJoining: isSelected
                     ? profile.reasonsForJoining.filter((item) => item !== reason)
-                    : reason === "Opt out"
-                      ? ["Opt out"]
-                      : [...profile.reasonsForJoining.filter((item) => item !== "Opt out"), reason],
+                    : [...profile.reasonsForJoining, reason],
                 });
               }}
             >
@@ -605,7 +615,6 @@ function Questionnaire({
           ))}
         </div>
       ),
-      valid: profile.reasonsForJoining.length > 0,
     },
     {
       kicker: "YOUR ACTIVE SIDE",
@@ -613,7 +622,7 @@ function Questionnaire({
       helper: "Pick as many as you like. No sport? You can skip this one.",
       content: (
         <div className="choice-grid">
-          {[...sports, "Opt out"].map((sport) => (
+          {sports.map((sport) => (
             <ChoiceButton
               key={sport}
               active={profile.sports.includes(sport)}
@@ -623,9 +632,7 @@ function Questionnaire({
                   ...profile,
                   sports: isSelected
                     ? profile.sports.filter((item) => item !== sport)
-                    : sport === "Opt out"
-                      ? ["Opt out"]
-                      : [...profile.sports.filter((item) => item !== "Opt out"), sport],
+                    : [...profile.sports, sport],
                 });
               }}
             >
@@ -634,7 +641,6 @@ function Questionnaire({
           ))}
         </div>
       ),
-      valid: true,
     },
     {
       kicker: "YOUR MUSICAL SIDE",
@@ -643,7 +649,7 @@ function Questionnaire({
       content: (
         <div className="instrument-question">
           <div className="choice-grid">
-            {["Yes, I do!", "Not right now", "Opt out"].map((answer) => (
+            {["Yes, I do!", "Not right now"].map((answer) => (
               <ChoiceButton
                 key={answer}
                 active={profile.playsInstrument === answer}
@@ -679,10 +685,6 @@ function Questionnaire({
           )}
         </div>
       ),
-      valid:
-        profile.playsInstrument === "Not right now" ||
-        profile.playsInstrument === "Opt out" ||
-        (profile.playsInstrument === "Yes, I do!" && Boolean(profile.instrument.trim())),
     },
     {
       kicker: "YOUR BONE HISTORY",
@@ -690,14 +692,13 @@ function Questionnaire({
       helper: "It’s totally okay if you’re not sure.",
       content: (
         <div className="stacked-choices">
-          {["Yes, I broke a bone", "I had a sprain or bruise", "Nope, not yet", "I’m not sure", "Opt out"].map((answer) => (
+          {["Yes, I broke a bone", "I had a sprain or bruise", "Nope, not yet", "I’m not sure"].map((answer) => (
             <ChoiceButton key={answer} active={profile.injury === answer} onClick={() => setProfile({ ...profile, injury: answer })}>
               {answer}
             </ChoiceButton>
           ))}
         </div>
       ),
-      valid: Boolean(profile.injury),
     },
     {
       kicker: "ONE LAST THING",
@@ -705,20 +706,17 @@ function Questionnaire({
       helper: "This helps Benny pick examples you’ll like.",
       content: (
         <div className="choice-grid">
-          {[...activities, "Opt out"].map((activity) => (
+          {activities.map((activity) => (
             <ChoiceButton
               key={activity}
               active={profile.activities.includes(activity)}
               onClick={() => {
-                const isOptOut = activity === "Opt out";
                 const isSelected = profile.activities.includes(activity);
                 setProfile({
                   ...profile,
                   activities: isSelected
                     ? profile.activities.filter((item) => item !== activity)
-                    : isOptOut
-                      ? ["Opt out"]
-                      : [...profile.activities.filter((item) => item !== "Opt out"), activity],
+                    : [...profile.activities, activity],
                 });
               }}
             >
@@ -727,7 +725,6 @@ function Questionnaire({
           ))}
         </div>
       ),
-      valid: true,
     },
   ];
   const current = questions[step];
@@ -748,6 +745,7 @@ function Questionnaire({
         <span className="eyebrow">{current.kicker}</span>
         <h1>{current.title}</h1>
         <p className="muted">{current.helper}</p>
+        <p className="question-skip-note">Every question is optional. Select Next to skip.</p>
         <div className="question-content">{current.content}</div>
         <div className="quiz-actions">
           <button className="back-button" type="button" disabled={step === 0} onClick={() => setStep(step - 1)}>
@@ -756,7 +754,6 @@ function Questionnaire({
           <button
             className="primary-button"
             type="button"
-            disabled={!current.valid}
             onClick={() => (step === questions.length - 1 ? onDone() : setStep(step + 1))}
           >
             {step === questions.length - 1 ? "Show my home" : "Next"}
@@ -4030,26 +4027,23 @@ function ProfilePage({
   const [lastName, setLastName] = useState(account.lastName);
   const [username, setUsername] = useState(account.username);
   const [email, setEmail] = useState(account.email);
-  const [draftProfile, setDraftProfile] = useState<Profile>({ ...profile });
+  const [draftProfile, setDraftProfile] = useState<Profile>(() => normalizeProfile(profile));
   const [message, setMessage] = useState("");
 
   function toggleArray(field: "sports" | "activities" | "reasonsForJoining", value: string) {
     const current = draftProfile[field];
-    const optOut = "Opt out";
     const next = current.includes(value)
       ? current.filter((item) => item !== value)
-      : value === optOut
-        ? [optOut]
-        : [...current.filter((item) => item !== optOut), value];
+      : [...current, value];
     setDraftProfile({ ...draftProfile, [field]: next });
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const updatedProfile: Profile = {
+    const updatedProfile = normalizeProfile({
       ...draftProfile,
       name: firstName.trim() || account.firstName,
-    };
+    });
     const result = onSave({
       ...account,
       firstName: firstName.trim(),
@@ -4126,7 +4120,7 @@ function ProfilePage({
               <fieldset>
                 <legend>Why did you join?</legend>
                 <div className="profile-option-grid">
-                  {["To learn about bones", "To get better at first aid", "To earn XP and play games", "For a school assignment", "Opt out"].map((reason) => (
+                  {["To learn about bones", "To get better at first aid", "To earn XP and play games", "For a school assignment"].map((reason) => (
                     <label className="profile-check" key={reason}>
                       <input type="checkbox" checked={draftProfile.reasonsForJoining.includes(reason)} onChange={() => toggleArray("reasonsForJoining", reason)} />
                       <span>{reason}</span>
@@ -4138,7 +4132,7 @@ function ProfilePage({
               <fieldset>
                 <legend>Sports you enjoy</legend>
                 <div className="profile-option-grid">
-                  {[...sports, "Opt out"].map((sport) => (
+                  {sports.map((sport) => (
                     <label className="profile-check" key={sport}>
                       <input type="checkbox" checked={draftProfile.sports.includes(sport)} onChange={() => toggleArray("sports", sport)} />
                       <span>{sport}</span>
@@ -4150,7 +4144,7 @@ function ProfilePage({
               <fieldset>
                 <legend>Activities you enjoy</legend>
                 <div className="profile-option-grid">
-                  {[...activities, "Opt out"].map((activity) => (
+                  {activities.map((activity) => (
                     <label className="profile-check" key={activity}>
                       <input type="checkbox" checked={draftProfile.activities.includes(activity)} onChange={() => toggleArray("activities", activity)} />
                       <span>{activity}</span>
@@ -4165,7 +4159,6 @@ function ProfilePage({
                   <option value="">Choose an answer</option>
                   <option>Yes, I do!</option>
                   <option>Not right now</option>
-                  <option>Opt out</option>
                 </select>
               </label>
               {draftProfile.playsInstrument === "Yes, I do!" && (
@@ -4179,7 +4172,7 @@ function ProfilePage({
                 <span>Have you ever been injured?</span>
                 <select value={draftProfile.injury} onChange={(event) => setDraftProfile({ ...draftProfile, injury: event.target.value })}>
                   <option value="">Choose an answer</option>
-                  {["Yes, once", "Yes, more than once", "Not yet", "Opt out"].map((answer) => (
+                  {["Yes, once", "Yes, more than once", "Not yet"].map((answer) => (
                     <option key={answer}>{answer}</option>
                   ))}
                 </select>
@@ -4341,7 +4334,34 @@ function Home({
   const [activeLesson, setActiveLesson] = useState<number | null>(null);
   const [showGame, setShowGame] = useState(false);
   const [showShop, setShowShop] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [resumeProgress, setResumeProgress] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const hasStartedLessons = Boolean(
+    lessonProgress ||
+    lesson1QuizCompleted ||
+    lesson2FinalQuizScoringCompleted ||
+    lesson3QuizCompleted ||
+    lesson4QuizCompleted
+  );
+
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    function closeProfileMenu(event: MouseEvent | KeyboardEvent) {
+      if (event instanceof KeyboardEvent && event.key === "Escape") {
+        setProfileMenuOpen(false);
+      }
+      if (event instanceof MouseEvent && !profileMenuRef.current?.contains(event.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", closeProfileMenu);
+    document.addEventListener("keydown", closeProfileMenu);
+    return () => {
+      document.removeEventListener("pointerdown", closeProfileMenu);
+      document.removeEventListener("keydown", closeProfileMenu);
+    };
+  }, [profileMenuOpen]);
 
   if (showShop) {
     return (
@@ -4468,7 +4488,25 @@ function Home({
           <button className="leaderboard-nav-button" type="button" onClick={onOpenLeaderboard} aria-label="Open leaderboard">
             <span aria-hidden="true">🏆</span><span>Leaderboard</span>
           </button>
-          <button className="avatar" type="button" onClick={onOpenProfile} title="Open my profile" aria-label="Open my profile">{profile.name.charAt(0).toUpperCase()}</button>
+          <div className="profile-menu-wrap" ref={profileMenuRef}>
+            <button
+              className="avatar"
+              type="button"
+              onClick={() => setProfileMenuOpen((open) => !open)}
+              title="Open account menu"
+              aria-label="Open account menu"
+              aria-haspopup="menu"
+              aria-expanded={profileMenuOpen}
+            >
+              {profile.name.charAt(0).toUpperCase()}
+            </button>
+            {profileMenuOpen && (
+              <div className="profile-menu" role="menu" aria-label="Account options">
+                <button type="button" role="menuitem" onClick={() => { setProfileMenuOpen(false); onOpenProfile(); }}>View profile</button>
+                <button type="button" role="menuitem" onClick={() => { setProfileMenuOpen(false); onSignOut(); }}>Log out</button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -4477,14 +4515,14 @@ function Home({
           <div>
             <span className="eyebrow">GOOD TO SEE YOU!</span>
             <h1>Hey {profile.name}, ready to get bone-smart?</h1>
-            <p>Pick up where you left off, or explore something new.</p>
+            <p>{hasStartedLessons ? "Pick up where you left off, or explore something new." : "Ready to begin? Start your first bone-smart lesson!"}</p>
             <div className="welcome-actions">
               <button className="dark-button" type="button" onClick={() => {
                 const progress = lessonProgress ?? { lessonIndex: 0, slideIndex: 0 };
                 setResumeProgress(true);
                 setActiveLesson(progress.lessonIndex);
               }}>
-                Continue where I left off <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                {hasStartedLessons ? "Continue where I left off" : "Start lesson 1"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
               </button>
               <button className="game-shortcut-button" type="button" onClick={() => setShowGame(true)}>
                 <BoneSymbol className="game-shortcut-bone" /> Play Bone Bonanza
@@ -4633,7 +4671,7 @@ export default function App() {
       <SignIn
         onContinue={(signedIn, isNew) => {
           setAccount(signedIn);
-          setProfile(signedIn.profile ?? { ...initialProfile, name: signedIn.firstName });
+          setProfile(normalizeProfile(signedIn.profile ?? { ...initialProfile, name: signedIn.firstName }));
           startFirstDay();
           setScreen(isNew || !hasCompletedOnboarding(signedIn) ? "quiz" : "home");
         }}
@@ -4649,9 +4687,11 @@ export default function App() {
           setProfile={setProfile}
           onDone={() => {
             if (account) {
-              const updatedAccount = { ...account, profile, onboardingCompleted: true };
+              const normalizedProfile = normalizeProfile(profile);
+              const updatedAccount = { ...account, profile: normalizedProfile, onboardingCompleted: true };
               saveAccount(updatedAccount, loadAccounts());
               setAccount(updatedAccount);
+              setProfile(normalizedProfile);
             }
             setScreen("home");
           }}
