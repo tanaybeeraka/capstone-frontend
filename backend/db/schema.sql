@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS users (
   profile              JSONB,
   onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
   xp                   INTEGER NOT NULL DEFAULT 0 CHECK (xp >= 0),
+  owned_skins          TEXT[] NOT NULL DEFAULT ARRAY['classic'],
+  equipped_skin        TEXT NOT NULL DEFAULT 'classic',
+  lesson_progress      JSONB,
   streak_count         INTEGER NOT NULL DEFAULT 0,
   streak_last_active   DATE,
   created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -19,6 +22,10 @@ CREATE TABLE IF NOT EXISTS users (
 -- Usernames and emails are unique regardless of letter case.
 CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx ON users (lower(username));
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_idx ON users (lower(email));
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS owned_skins TEXT[] NOT NULL DEFAULT ARRAY['classic'];
+ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_skin TEXT NOT NULL DEFAULT 'classic';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS lesson_progress JSONB;
 
 -- One row per lesson quiz whose XP has been claimed. The primary key makes each claim one-time.
 CREATE TABLE IF NOT EXISTS lesson_completions (
@@ -36,3 +43,13 @@ CREATE TABLE IF NOT EXISTS daily_answers (
   answer_index INTEGER NOT NULL,
   PRIMARY KEY (user_id, day)
 );
+
+CREATE TABLE IF NOT EXISTS game_runs (
+  id           BIGSERIAL PRIMARY KEY,
+  user_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  difficulty   TEXT NOT NULL CHECK (difficulty IN ('easy', 'hard')),
+  stars        INTEGER NOT NULL CHECK (stars >= 0),
+  achieved_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS game_runs_leaderboard_idx ON game_runs (difficulty, stars DESC, achieved_at ASC);

@@ -1,5 +1,24 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { animate } from "motion";
 import { createContext, DragEvent, FormEvent, InputHTMLAttributes, ReactNode, useContext, useEffect, useRef, useState } from "react";
+import {
+  ApiUser,
+  authenticate,
+  buySkin as apiBuySkin,
+  claimLessonQuiz,
+  clearApiToken,
+  earnXp as apiEarnXp,
+  equipSkin as apiEquipSkin,
+  loadDailyAnswer,
+  loadLeaderboard as apiLoadLeaderboard,
+  recordGameRun,
+  recordStreak,
+  restoreSession,
+  saveDailyAnswer,
+  saveLessonProgress,
+  saveProfile,
+  spendXp as apiSpendXp,
+} from "./api";
 
 type Screen = "signin" | "quiz" | "home" | "profile" | "leaderboard";
 
@@ -66,6 +85,38 @@ function Icon({
       {children}
     </svg>
   );
+}
+
+function AnimatedNumber({ value, initialValue = value }: { value: number; initialValue?: number }) {
+  const numberRef = useRef<HTMLSpanElement>(null);
+  const currentValueRef = useRef(initialValue);
+  const firstRenderRef = useRef(true);
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    const element = numberRef.current;
+    if (!element) return;
+
+    const startValue = firstRenderRef.current ? initialValue : currentValueRef.current;
+    firstRenderRef.current = false;
+    if (reduceMotion || startValue === value) {
+      currentValueRef.current = value;
+      element.textContent = Math.round(value).toLocaleString();
+      return;
+    }
+
+    const controls = animate(startValue, value, {
+      duration: 1.1,
+      ease: "circOut",
+      onUpdate: (latest) => {
+        currentValueRef.current = latest;
+        element.textContent = Math.round(latest).toLocaleString();
+      },
+    });
+    return () => controls.stop();
+  }, [initialValue, reduceMotion, value]);
+
+  return <span ref={numberRef}>{Math.round(initialValue).toLocaleString()}</span>;
 }
 
 function BoneSymbol({ className }: { className?: string }) {
@@ -257,6 +308,69 @@ function BennyReaction({ expression, message }: { expression: BennyExpression; m
   );
 }
 
+function LessonSlideStack({ slideKey, children }: { slideKey: string | number; children: ReactNode }) {
+  const reduceMotion = useReducedMotion();
+  const keyText = String(slideKey);
+  const slideNumber = Number.parseInt(keyText, 10) || 0;
+  const animationIndex = (slideNumber * 2 + (keyText.includes("quick-check") ? 1 : 0)) % 7;
+  const irisOrigin = animationIndex === 4 ? "22% 30%" : "50% 50%";
+  let initial: { opacity: number; x: number; y: number; scale: number; rotateX: number; rotateY: number; clipPath: string } = {
+    opacity: 0, x: 0, y: 28, scale: 0.97, rotateX: 3, rotateY: 0, clipPath: "inset(0 0 0 0 round 24px)",
+  };
+  let exit: { opacity: number; x: number; y: number; scale: number; rotateX: number; rotateY: number; clipPath: string } = {
+    opacity: 0, x: 0, y: -18, scale: 0.98, rotateX: -2, rotateY: 0, clipPath: "inset(0 0 0 0 round 24px)",
+  };
+  let transition: { duration: number; ease: "easeOut" | "linear" | [number, number, number, number] } = {
+    duration: 0.42, ease: [0.22, 1, 0.36, 1],
+  };
+
+  if (animationIndex === 1) {
+    initial = { opacity: 0, x: 0, y: 0, scale: 0.97, rotateX: 0, rotateY: 0, clipPath: "inset(0 0 0 0 round 24px)" };
+    exit = { opacity: 0, x: 0, y: 0, scale: 1.02, rotateX: 0, rotateY: 0, clipPath: "inset(0 0 0 0 round 24px)" };
+  } else if (animationIndex === 2 || animationIndex === 4) {
+    const origin = animationIndex === 2 ? "50% 50%" : "22% 30%";
+    initial = { opacity: 1, x: 0, y: 0, scale: 1, rotateX: 0, rotateY: 0, clipPath: `circle(0% at ${origin})` };
+    exit = { opacity: 1, x: 0, y: 0, scale: 1, rotateX: 0, rotateY: 0, clipPath: `circle(0% at ${origin})` };
+  } else if (animationIndex === 3) {
+    initial = { opacity: 1, x: 0, y: 0, scale: 1, rotateX: 0, rotateY: 0, clipPath: "inset(0 50% 0 50% round 24px)" };
+    exit = { opacity: 1, x: 0, y: 0, scale: 1, rotateX: 0, rotateY: 0, clipPath: "inset(0 50% 0 50% round 24px)" };
+  } else if (animationIndex === 5) {
+    initial = { opacity: 0, x: 0, y: 0, scale: 1, rotateX: 0, rotateY: 0, clipPath: "inset(0 100% 0 0 round 24px)" };
+    exit = { opacity: 0, x: 0, y: 0, scale: 1, rotateX: 0, rotateY: 0, clipPath: "inset(0 0 0 100% round 24px)" };
+    transition = { duration: 0.48, ease: "linear" };
+  } else if (animationIndex === 6) {
+    initial = { opacity: 0, y: 0, x: 42, scale: 0.92, rotateX: 0, rotateY: -8, clipPath: "inset(0 0 0 0 round 24px)" };
+    exit = { opacity: 0, y: 0, x: -34, scale: 0.96, rotateX: 0, rotateY: 7, clipPath: "inset(0 0 0 0 round 24px)" };
+  }
+
+  return (
+    <div className="lesson-slide-stack">
+      <AnimatePresence initial={false} mode="sync">
+        <motion.div
+          key={slideKey}
+          className="lesson-slide-stack-card"
+          initial={reduceMotion ? { opacity: 0 } : initial}
+          animate={{
+            opacity: 1,
+            x: 0,
+            y: 0,
+            scale: 1,
+            rotateX: 0,
+            rotateY: 0,
+            clipPath: animationIndex === 2 || animationIndex === 4
+              ? `circle(150% at ${irisOrigin})`
+              : "inset(0 0 0 0 round 24px)",
+          }}
+          exit={reduceMotion ? { opacity: 0 } : exit}
+          transition={reduceMotion ? { duration: 0.12 } : transition}
+        >
+          {children}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
 type LessonProgress = {
   lessonIndex: 0 | 1 | 2 | 3;
   slideIndex: number;
@@ -267,7 +381,6 @@ type Account = {
   lastName: string;
   username: string;
   email: string;
-  password: string;
   profile?: Profile;
   onboardingCompleted?: boolean;
   xp?: number;
@@ -280,7 +393,35 @@ type Account = {
   lesson3QuizCompleted?: boolean;
   lesson4QuizCompleted?: boolean;
   lessonProgress?: LessonProgress;
+  streak?: { count: number; lastActiveDate: string | null };
 };
+
+function isBennySkinId(skinId: string): skinId is BennySkinId {
+  return bennySkins.some((skin) => skin.id === skinId);
+}
+
+function mapApiUser(user: ApiUser): Account {
+  const ownedSkins = user.ownedSkins.filter(isBennySkinId);
+  return {
+    firstName: user.firstName,
+    lastName: user.lastName,
+    username: user.username,
+    email: user.email,
+    profile: user.profile ?? undefined,
+    onboardingCompleted: user.onboardingCompleted,
+    xp: user.xp,
+    ownedSkins: ownedSkins.length > 0 ? ownedSkins : ["classic"],
+    equippedSkin: isBennySkinId(user.equippedSkin) ? user.equippedSkin : "classic",
+    lesson1QuizCompleted: user.lesson1QuizCompleted,
+    lesson2QuizCompleted: user.lesson2QuizCompleted,
+    lesson2FinalQuizCompleted: user.lesson2FinalQuizCompleted,
+    lesson2FinalQuizScoringCompleted: user.lesson2FinalQuizCompleted,
+    lesson3QuizCompleted: user.lesson3QuizCompleted,
+    lesson4QuizCompleted: user.lesson4QuizCompleted,
+    lessonProgress: user.lessonProgress ?? undefined,
+    streak: user.streak,
+  };
+}
 
 type GameDifficulty = "easy" | "hard";
 
@@ -290,28 +431,6 @@ type LeaderboardEntry = {
   stars: number;
   achievedAt: number;
 };
-
-const accountsKey = "bone-buddies-accounts";
-const leaderboardKey = "bone-buddies-leaderboard-v2";
-
-function loadLeaderboard(): LeaderboardEntry[] {
-  const saved = window.localStorage.getItem(leaderboardKey);
-  if (!saved) return [];
-  const entries: unknown = JSON.parse(saved);
-  if (!Array.isArray(entries)) return [];
-  return entries.filter((entry): entry is LeaderboardEntry =>
-    typeof entry?.username === "string" &&
-    (entry.difficulty === "easy" || entry.difficulty === "hard") &&
-    Number.isInteger(entry.stars) &&
-    entry.stars >= 0 &&
-    Number.isFinite(entry.achievedAt)
-  );
-}
-
-function loadAccounts(): Record<string, Account> {
-  const saved = window.localStorage.getItem(accountsKey);
-  return saved ? JSON.parse(saved) : {};
-}
 
 function hasCompletedOnboarding(account: Account) {
   // Accounts created before this flag existed count as onboarded if they have a profile or any progress.
@@ -343,11 +462,6 @@ function getLessonProgress(account: Account | null): LessonProgress | undefined 
   return progress;
 }
 
-function saveAccount(account: Account, accounts: Record<string, Account>) {
-  accounts[account.username.toLowerCase()] = account;
-  window.localStorage.setItem(accountsKey, JSON.stringify(accounts));
-}
-
 function Field({
   label,
   icon,
@@ -370,7 +484,10 @@ function Field({
 const personIcon = <><path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="7" r="4" /></>;
 const lockIcon = <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>;
 
-function SignIn({ onContinue }: { onContinue: (account: Account, isNew: boolean) => void }) {
+function SignIn({ onContinue, initialError = "" }: {
+  onContinue: (account: Account, isNew: boolean) => void | Promise<void>;
+  initialError?: string;
+}) {
   const [mode, setMode] = useState<"signin" | "create">("signin");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -379,12 +496,14 @@ function SignIn({ onContinue }: { onContinue: (account: Account, isNew: boolean)
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => { if (initialError) setError(initialError); }, [initialError]);
+
   function switchMode() {
     setMode(mode === "signin" ? "create" : "signin");
     setError("");
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const invalidField = form.querySelector<HTMLInputElement>(":invalid");
@@ -395,49 +514,20 @@ function SignIn({ onContinue }: { onContinue: (account: Account, isNew: boolean)
       return;
     }
 
-    let accounts: Record<string, Account>;
     try {
-      accounts = loadAccounts();
-    } catch {
-      setError("We couldn’t read saved accounts in this browser. Please refresh the page and try again.");
-      return;
+      const user = await authenticate(mode === "signin" ? "login" : "signup", mode === "signin"
+        ? { username: username.trim(), password }
+        : {
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            username: username.trim(),
+            email: email.trim(),
+            password,
+          });
+      await onContinue(mapApiUser(user), mode === "create");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "We couldn’t connect to your account. Please try again.");
     }
-    const usernameKey = username.trim().toLowerCase();
-
-    if (mode === "signin") {
-      const account = accounts[usernameKey];
-      if (!account || account.password !== password) {
-        setError("That username and password don’t match. Try again!");
-        return;
-      }
-      onContinue(account, false);
-      return;
-    }
-
-    if (accounts[usernameKey]) {
-      setError("That username is already taken. Try a different one!");
-      return;
-    }
-    const emailKey = email.trim().toLowerCase();
-    if (Object.values(accounts).some((account) => account.email.toLowerCase() === emailKey)) {
-      setError("An account with that email already exists. Try signing in!");
-      return;
-    }
-
-    const account: Account = {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      username: username.trim(),
-      email: email.trim(),
-      password,
-    };
-    try {
-      saveAccount(account, accounts);
-    } catch {
-      setError("Your account couldn’t be saved in this browser. Check that browser storage is enabled, then try again.");
-      return;
-    }
-    onContinue(account, true);
   }
 
   return (
@@ -555,7 +645,7 @@ function ChoiceButton({
   return (
     <button className={`choice ${active ? "choice-active" : ""} ${status ? `choice-${status}` : ""}`} type="button" onClick={onClick}>
       <span>{children}</span>
-      <span className="choice-check">{active ? "✓" : ""}</span>
+      <span className="choice-check">{status === "correct" ? "✓" : ""}</span>
     </button>
   );
 }
@@ -567,7 +657,7 @@ function Questionnaire({
 }: {
   profile: Profile;
   setProfile: (profile: Profile) => void;
-  onDone: () => void;
+  onDone: () => void | Promise<void>;
 }) {
   const [step, setStep] = useState(0);
   const questions = [
@@ -1091,6 +1181,8 @@ function FractureLesson({
   const [phase, setPhase] = useState<"learn" | "quick-check" | "final-quiz" | "finished">("learn");
   const [slide, setSlide] = useState(() => Math.min(Math.max(initialSlide, 0), fractureSlides.length - 1));
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [quickCheckSubmitted, setQuickCheckSubmitted] = useState(false);
+  const [completedQuickChecks, setCompletedQuickChecks] = useState<Set<number>>(() => new Set());
   const [finalQuizIndex, setFinalQuizIndex] = useState(0);
   const [finalQuizCorrectCount, setFinalQuizCorrectCount] = useState(0);
   const [finalQuizXp, setFinalQuizXp] = useState(0);
@@ -1115,8 +1207,9 @@ function FractureLesson({
   }
 
   function answerQuickCheck(index: number) {
-    if (selectedAnswer !== null) return;
+    if (quickCheckSubmitted && selectedAnswer === currentSlide.answer) return;
     setSelectedAnswer(index);
+    setQuickCheckSubmitted(false);
   }
 
   function answerFinalQuestion(index: number) {
@@ -1124,11 +1217,7 @@ function FractureLesson({
     setSelectedAnswer(index);
   }
 
-  function advanceQuickCheck() {
-    if (selectedAnswer !== currentSlide.answer) {
-      setSelectedAnswer(null);
-      return;
-    }
+  function continueFromSlide() {
     if (slide === fractureSlides.length - 1) {
       setFinalQuizIndex(0);
       setFinalQuizCorrectCount(0);
@@ -1143,7 +1232,22 @@ function FractureLesson({
     }
     goToSlide(slide + 1);
     setSelectedAnswer(null);
+    setQuickCheckSubmitted(false);
     setPhase("learn");
+  }
+
+  function advanceQuickCheck() {
+    if (!quickCheckSubmitted) {
+      setQuickCheckSubmitted(true);
+      return;
+    }
+    if (selectedAnswer !== currentSlide.answer) {
+      setSelectedAnswer(null);
+      setQuickCheckSubmitted(false);
+      return;
+    }
+    setCompletedQuickChecks((completed) => new Set(completed).add(slide));
+    continueFromSlide();
   }
 
   function advanceFinalQuiz() {
@@ -1227,7 +1331,7 @@ function FractureLesson({
           <p>You got {finalQuizCorrectCount} out of {fractureFinalQuestions.length} final quiz questions right on your first try. Remember: a break and a fracture are the same thing. Tell a grown-up if you think someone is hurt.</p>
           <div className="lesson-results-stats">
             <div><strong>{finalQuizCorrectCount}/{fractureFinalQuestions.length}</strong><span>correct on first try</span></div>
-            <div><strong>+{earnedXp} XP</strong><span>{xpWasAlreadyClaimed ? "already collected" : "added to your account"}</span></div>
+            <div><strong>+<AnimatedNumber value={earnedXp} initialValue={0} /> XP</strong><span>{xpWasAlreadyClaimed ? "already collected" : "added to your account"}</span></div>
           </div>
           <p className="lesson-xp-note">{xpWasAlreadyClaimed ? "You’ve already collected XP for this quiz. Replay to practice!" : "A correct first try earns 10 XP, a correct second try earns 5 XP, and the third try earns 1 XP."}</p>
           <div className="lesson-finish-actions">
@@ -1266,6 +1370,7 @@ function FractureLesson({
         </div>
 
         {phase === "learn" ? (
+          <LessonSlideStack slideKey={slide}>
           <section className="fracture-card">
             <div className={`fracture-illustration ${currentSlide.fractureType ? "fracture-illustration-xray" : ""}`}>
               {currentSlide.fractureType
@@ -1289,28 +1394,37 @@ function FractureLesson({
                 <button
                   className="primary-button"
                   type="button"
-                  onClick={() => { setSelectedAnswer(null); setPhase("quick-check"); }}
+                  onClick={() => {
+                    if (completedQuickChecks.has(slide)) {
+                      continueFromSlide();
+                      return;
+                    }
+                    setSelectedAnswer(null);
+                    setQuickCheckSubmitted(false);
+                    setPhase("quick-check");
+                  }}
                 >
-                  Quick check <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                  {completedQuickChecks.has(slide) ? slide === fractureSlides.length - 1 ? "Start final quiz" : "Next slide" : "Quick check"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
                 </button>
               </div>
             </div>
           </section>
+          </LessonSlideStack>
         ) : phase === "quick-check" ? (
+          <LessonSlideStack slideKey={`${slide}-quick-check`}>
           <section className="fracture-quiz-card">
             <span className="eyebrow">QUICK CHECK · SLIDE {slide + 1}</span>
             <h1>{currentSlide.question}</h1>
             <BennyReaction
-              expression={selectedAnswer === null ? "neutral" : selectedAnswer === currentSlide.answer ? "happy" : "sad"}
-              message={selectedAnswer === null ? "Pick an answer!" : selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Try again!"}
+              expression={!quickCheckSubmitted || selectedAnswer === null ? "neutral" : selectedAnswer === currentSlide.answer ? "happy" : "sad"}
+              message={!quickCheckSubmitted ? selectedAnswer === null ? "Pick an answer!" : "Tap Check answer when you’re ready!" : selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Try again!"}
             />
             <div className="fracture-quiz-options">
               {currentSlide.options.map((option, index) => (
                 <button
                   type="button"
-                  className={`fracture-quiz-option ${selectedAnswer === index ? (index === currentSlide.answer ? "correct" : "incorrect") : ""}`}
+                  className={`fracture-quiz-option ${selectedAnswer === index ? quickCheckSubmitted ? (index === currentSlide.answer ? "correct" : "incorrect") : "selected" : ""}`}
                   key={option}
-                  disabled={selectedAnswer !== null}
                   onClick={() => answerQuickCheck(index)}
                 >
                   {option}
@@ -1318,12 +1432,13 @@ function FractureLesson({
               ))}
             </div>
             <div className="fracture-actions">
-              <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSelectedAnswer(null); }}>← Review slide</button>
+              <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSelectedAnswer(null); setQuickCheckSubmitted(false); }}>← Review slide</button>
               <button className="primary-button" type="button" disabled={selectedAnswer === null} onClick={advanceQuickCheck}>
-                {selectedAnswer === currentSlide.answer && slide === fractureSlides.length - 1 ? "Start final quiz" : selectedAnswer === currentSlide.answer ? "Next slide" : "Try again"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                {!quickCheckSubmitted ? "Check answer" : selectedAnswer !== currentSlide.answer ? "Try again" : slide === fractureSlides.length - 1 ? "Start final quiz" : "Next slide"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
               </button>
             </div>
           </section>
+          </LessonSlideStack>
         ) : (
           <section className="fracture-quiz-card">
             <span className="eyebrow">FINAL QUIZ · QUESTION {finalQuizIndex + 1}</span>
@@ -1484,6 +1599,8 @@ function HealingLesson({
   const [phase, setPhase] = useState<"learn" | "quick-check" | "final-quiz" | "finished">("learn");
   const [slide, setSlide] = useState(() => Math.min(Math.max(initialSlide, 0), healingSlides.length - 1));
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [quickCheckSubmitted, setQuickCheckSubmitted] = useState(false);
+  const [completedQuickChecks, setCompletedQuickChecks] = useState<Set<number>>(() => new Set());
   const [finalQuizIndex, setFinalQuizIndex] = useState(0);
   const [finalQuizCorrectCount, setFinalQuizCorrectCount] = useState(0);
   const [finalQuizXp, setFinalQuizXp] = useState(0);
@@ -1506,11 +1623,7 @@ function HealingLesson({
     setSlide(nextSlide);
   }
 
-  function advanceQuickCheck() {
-    if (selectedAnswer !== currentSlide.answer) {
-      setSelectedAnswer(null);
-      return;
-    }
+  function continueFromSlide() {
     if (slide === healingSlides.length - 1) {
       setFinalQuizIndex(0);
       setFinalQuizCorrectCount(0);
@@ -1525,7 +1638,22 @@ function HealingLesson({
     }
     goToSlide(slide + 1);
     setSelectedAnswer(null);
+    setQuickCheckSubmitted(false);
     setPhase("learn");
+  }
+
+  function advanceQuickCheck() {
+    if (!quickCheckSubmitted) {
+      setQuickCheckSubmitted(true);
+      return;
+    }
+    if (selectedAnswer !== currentSlide.answer) {
+      setSelectedAnswer(null);
+      setQuickCheckSubmitted(false);
+      return;
+    }
+    setCompletedQuickChecks((completed) => new Set(completed).add(slide));
+    continueFromSlide();
   }
 
   function advanceFinalQuiz() {
@@ -1607,7 +1735,7 @@ function HealingLesson({
           <p>You got {finalQuizCorrectCount} out of {healingFinalQuestions.length} final quiz questions right on your first try. Remember: healing happens in stages, and a health professional can help care for a fracture.</p>
           <div className="lesson-results-stats">
             <div><strong>{finalQuizCorrectCount}/{healingFinalQuestions.length}</strong><span>correct on first try</span></div>
-            <div><strong>+{finalQuizXp} XP</strong><span>{xpWasAlreadyClaimed ? "already collected" : "added to your account"}</span></div>
+            <div><strong>+<AnimatedNumber value={finalQuizXp} initialValue={0} /> XP</strong><span>{xpWasAlreadyClaimed ? "already collected" : "added to your account"}</span></div>
           </div>
           <p className="lesson-xp-note">{xpWasAlreadyClaimed ? "You’ve already collected XP for this quiz. Replay to practice!" : "A correct first try earns 10 XP, a correct second try earns 5 XP, and the third try earns 1 XP."}</p>
           <div className="lesson-finish-actions">
@@ -1641,6 +1769,7 @@ function HealingLesson({
         </div>
 
         {phase === "learn" ? (
+          <LessonSlideStack slideKey={slide}>
           <section className="fracture-card">
             <div className="fracture-illustration fracture-illustration-xray">
               <HealingStageIllustration stage={slide + 1} />
@@ -1654,40 +1783,51 @@ function HealingLesson({
               </ul>
               <div className="fracture-actions">
                 <button className="back-button" type="button" disabled={slide === 0} onClick={() => goToSlide(slide - 1)}>← Back</button>
-                <button className="primary-button" type="button" onClick={() => { setSelectedAnswer(null); setPhase("quick-check"); }}>
-                  Quick check <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                <button className="primary-button" type="button" onClick={() => {
+                  if (completedQuickChecks.has(slide)) {
+                    continueFromSlide();
+                    return;
+                  }
+                  setSelectedAnswer(null);
+                  setQuickCheckSubmitted(false);
+                  setPhase("quick-check");
+                }}>
+                  {completedQuickChecks.has(slide) ? slide === healingSlides.length - 1 ? "Start final quiz" : "Next slide" : "Quick check"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
                 </button>
               </div>
             </div>
           </section>
+          </LessonSlideStack>
         ) : phase === "quick-check" ? (
+          <LessonSlideStack slideKey={`${slide}-quick-check`}>
           <section className="fracture-quiz-card">
             <span className="eyebrow">QUICK CHECK · SLIDE {slide + 1}</span>
             <h1>{currentSlide.question}</h1>
             <BennyReaction
-              expression={selectedAnswer === null ? "neutral" : selectedAnswer === currentSlide.answer ? "happy" : "sad"}
-              message={selectedAnswer === null ? "Pick an answer!" : selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Try again!"}
+              expression={!quickCheckSubmitted || selectedAnswer === null ? "neutral" : selectedAnswer === currentSlide.answer ? "happy" : "sad"}
+              message={!quickCheckSubmitted ? selectedAnswer === null ? "Pick an answer!" : "Tap Check answer when you’re ready!" : selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Try again!"}
             />
             <div className="fracture-quiz-options">
               {currentSlide.options.map((option, index) => (
                 <button
                   type="button"
-                  className={`fracture-quiz-option ${selectedAnswer === index ? (index === currentSlide.answer ? "correct" : "incorrect") : ""}`}
+                  className={`fracture-quiz-option ${selectedAnswer === index ? quickCheckSubmitted ? (index === currentSlide.answer ? "correct" : "incorrect") : "selected" : ""}`}
                   key={option}
-                  disabled={selectedAnswer !== null}
-                  onClick={() => setSelectedAnswer(index)}
+                  disabled={quickCheckSubmitted && selectedAnswer === currentSlide.answer}
+                  onClick={() => { setSelectedAnswer(index); setQuickCheckSubmitted(false); }}
                 >
                   {option}
                 </button>
               ))}
             </div>
             <div className="fracture-actions">
-              <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSelectedAnswer(null); }}>← Review slide</button>
+              <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSelectedAnswer(null); setQuickCheckSubmitted(false); }}>← Review slide</button>
               <button className="primary-button" type="button" disabled={selectedAnswer === null} onClick={advanceQuickCheck}>
-                {selectedAnswer === currentSlide.answer && slide === healingSlides.length - 1 ? "Start final quiz" : selectedAnswer === currentSlide.answer ? "Next slide" : "Try again"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                {!quickCheckSubmitted ? "Check answer" : selectedAnswer !== currentSlide.answer ? "Try again" : slide === healingSlides.length - 1 ? "Start final quiz" : "Next slide"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
               </button>
             </div>
           </section>
+          </LessonSlideStack>
         ) : (
           <section className="fracture-quiz-card">
             <span className="eyebrow">FINAL QUIZ · QUESTION {finalQuizIndex + 1}</span>
@@ -1700,7 +1840,7 @@ function HealingLesson({
               {currentFinalQuestion.options.map((option, index) => (
                 <button
                   type="button"
-                  className={`fracture-quiz-option ${answerChecked && selectedAnswer === index ? (index === currentFinalQuestion.answer ? "correct" : "incorrect") : ""}`}
+                  className={`fracture-quiz-option ${!answerChecked && selectedAnswer === index ? "selected" : ""} ${answerChecked && selectedAnswer === index ? (index === currentFinalQuestion.answer ? "correct" : "incorrect") : ""}`}
                   key={option}
                   disabled={answerChecked}
                   onClick={() => setSelectedAnswer(index)}
@@ -1895,6 +2035,8 @@ function CastLesson({
   const [phase, setPhase] = useState<"learn" | "quick-check" | "final-quiz" | "finished">("learn");
   const [slide, setSlide] = useState(() => Math.min(Math.max(initialSlide, 0), castSlides.length - 1));
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [quickCheckSubmitted, setQuickCheckSubmitted] = useState(false);
+  const [completedQuickChecks, setCompletedQuickChecks] = useState<Set<number>>(() => new Set());
   const [finalQuizIndex, setFinalQuizIndex] = useState(0);
   const [finalQuizCorrectCount, setFinalQuizCorrectCount] = useState(0);
   const [finalQuizXp, setFinalQuizXp] = useState(0);
@@ -1917,11 +2059,7 @@ function CastLesson({
     setSlide(nextSlide);
   }
 
-  function advanceQuickCheck() {
-    if (selectedAnswer !== currentSlide.answer) {
-      setSelectedAnswer(null);
-      return;
-    }
+  function continueFromSlide() {
     if (slide === castSlides.length - 1) {
       setFinalQuizIndex(0);
       setFinalQuizCorrectCount(0);
@@ -1936,7 +2074,22 @@ function CastLesson({
     }
     goToSlide(slide + 1);
     setSelectedAnswer(null);
+    setQuickCheckSubmitted(false);
     setPhase("learn");
+  }
+
+  function advanceQuickCheck() {
+    if (!quickCheckSubmitted) {
+      setQuickCheckSubmitted(true);
+      return;
+    }
+    if (selectedAnswer !== currentSlide.answer) {
+      setSelectedAnswer(null);
+      setQuickCheckSubmitted(false);
+      return;
+    }
+    setCompletedQuickChecks((completed) => new Set(completed).add(slide));
+    continueFromSlide();
   }
 
   function advanceFinalQuiz() {
@@ -2007,7 +2160,7 @@ function CastLesson({
           <p>You got {finalQuizCorrectCount} out of {castFinalQuestions.length} final quiz questions right on your first try. Remember to follow your care team’s instructions and tell a grown-up if something feels wrong.</p>
           <div className="lesson-results-stats">
             <div><strong>{finalQuizCorrectCount}/{castFinalQuestions.length}</strong><span>correct on first try</span></div>
-            <div><strong>+{finalQuizXp} XP</strong><span>{xpWasAlreadyClaimed ? "already collected" : "added to your account"}</span></div>
+            <div><strong>+<AnimatedNumber value={finalQuizXp} initialValue={0} /> XP</strong><span>{xpWasAlreadyClaimed ? "already collected" : "added to your account"}</span></div>
           </div>
           <p className="lesson-xp-note">{xpWasAlreadyClaimed ? "You’ve already collected XP for this quiz. Replay to practice!" : "A correct first try earns 10 XP, a correct second try earns 5 XP, and the third try earns 1 XP."}</p>
           <div className="lesson-finish-actions">
@@ -2040,6 +2193,7 @@ function CastLesson({
           )}
         </div>
         {phase === "learn" ? (
+          <LessonSlideStack slideKey={slide}>
           <section className="fracture-card">
             <div className="fracture-illustration fracture-illustration-xray">
               <CastIllustration stage={slide + 1} />
@@ -2064,40 +2218,51 @@ function CastLesson({
               </ul>
               <div className="fracture-actions">
                 <button className="back-button" type="button" disabled={slide === 0} onClick={() => goToSlide(slide - 1)}>← Back</button>
-                <button className="primary-button" type="button" onClick={() => { setSelectedAnswer(null); setPhase("quick-check"); }}>
-                  Quick check <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                <button className="primary-button" type="button" onClick={() => {
+                  if (completedQuickChecks.has(slide)) {
+                    continueFromSlide();
+                    return;
+                  }
+                  setSelectedAnswer(null);
+                  setQuickCheckSubmitted(false);
+                  setPhase("quick-check");
+                }}>
+                  {completedQuickChecks.has(slide) ? slide === castSlides.length - 1 ? "Start final quiz" : "Next slide" : "Quick check"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
                 </button>
               </div>
             </div>
           </section>
+          </LessonSlideStack>
         ) : phase === "quick-check" ? (
+          <LessonSlideStack slideKey={`${slide}-quick-check`}>
           <section className="fracture-quiz-card">
             <span className="eyebrow">QUICK CHECK · SLIDE {slide + 1}</span>
             <h1>{currentSlide.question}</h1>
             <BennyReaction
-              expression={selectedAnswer === null ? "neutral" : selectedAnswer === currentSlide.answer ? "happy" : "sad"}
-              message={selectedAnswer === null ? "Pick an answer!" : selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Try again!"}
+              expression={!quickCheckSubmitted || selectedAnswer === null ? "neutral" : selectedAnswer === currentSlide.answer ? "happy" : "sad"}
+              message={!quickCheckSubmitted ? selectedAnswer === null ? "Pick an answer!" : "Tap Check answer when you’re ready!" : selectedAnswer === currentSlide.answer ? "That’s right! Nice remembering." : "Not quite. Try again!"}
             />
             <div className="fracture-quiz-options">
               {currentSlide.options.map((option, index) => (
                 <button
                   type="button"
-                  className={`fracture-quiz-option ${selectedAnswer === index ? (index === currentSlide.answer ? "correct" : "incorrect") : ""}`}
+                  className={`fracture-quiz-option ${selectedAnswer === index ? quickCheckSubmitted ? (index === currentSlide.answer ? "correct" : "incorrect") : "selected" : ""}`}
                   key={option}
-                  disabled={selectedAnswer !== null}
-                  onClick={() => setSelectedAnswer(index)}
+                  disabled={quickCheckSubmitted && selectedAnswer === currentSlide.answer}
+                  onClick={() => { setSelectedAnswer(index); setQuickCheckSubmitted(false); }}
                 >
                   {option}
                 </button>
               ))}
             </div>
             <div className="fracture-actions">
-              <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSelectedAnswer(null); }}>← Review slide</button>
+              <button className="back-button" type="button" onClick={() => { setPhase("learn"); setSelectedAnswer(null); setQuickCheckSubmitted(false); }}>← Review slide</button>
               <button className="primary-button" type="button" disabled={selectedAnswer === null} onClick={advanceQuickCheck}>
-                {selectedAnswer === currentSlide.answer && slide === castSlides.length - 1 ? "Start final quiz" : selectedAnswer === currentSlide.answer ? "Next slide" : "Try again"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                {!quickCheckSubmitted ? "Check answer" : selectedAnswer !== currentSlide.answer ? "Try again" : slide === castSlides.length - 1 ? "Start final quiz" : "Next slide"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
               </button>
             </div>
           </section>
+          </LessonSlideStack>
         ) : (
           <section className="fracture-quiz-card">
             <span className="eyebrow">FINAL QUIZ · QUESTION {finalQuizIndex + 1}</span>
@@ -2364,6 +2529,8 @@ function BoneLesson({
   const [mapExpression, setMapExpression] = useState<"neutral" | "frown" | "smile">("neutral");
   const [functionAnswer, setFunctionAnswer] = useState<number | null>(null);
   const [functionPassed, setFunctionPassed] = useState(false);
+  const [functionSubmitted, setFunctionSubmitted] = useState(false);
+  const [completedFunctionChecks, setCompletedFunctionChecks] = useState<Set<string>>(() => new Set());
   const [reviewIndex, setReviewIndex] = useState(0);
   const [reviewAnswer, setReviewAnswer] = useState<number | null>(null);
   const [reviewPassed, setReviewPassed] = useState(false);
@@ -2488,6 +2655,7 @@ function BoneLesson({
     setMapExpression("neutral");
     setFunctionAnswer(null);
     setFunctionPassed(false);
+    setFunctionSubmitted(false);
     setPhase("learn");
     setFeedback("");
   }
@@ -2500,8 +2668,41 @@ function BoneLesson({
     setMapExpression("neutral");
     setFunctionAnswer(null);
     setFunctionPassed(false);
+    setFunctionSubmitted(false);
     setPhase("learn");
     setFeedback("");
+  }
+
+  function advanceAfterBoneCheck() {
+    setFeedback("");
+    setMapExpression("neutral");
+    if (slide === bones.length) {
+      setPhase("practice");
+      return;
+    }
+    goToSlide(slide + 1);
+    setPlaced(new Set());
+    setSelectedBone(null);
+    setDraggedBone(null);
+    setFunctionAnswer(null);
+    setFunctionPassed(false);
+    setFunctionSubmitted(false);
+    setPhase("learn");
+  }
+
+  function submitFunctionAnswer() {
+    if (functionAnswer === null || functionSubmitted) return;
+    const isCorrect = functionChoices[functionAnswer] === functionQuestion.correct;
+    setFunctionSubmitted(true);
+    setFunctionPassed(isCorrect);
+    setFeedback(
+      isCorrect
+        ? `That's right! ${functionQuestion.correct}`
+        : "Not quite. Think about the job of this bone and try again!",
+    );
+    if (isCorrect) {
+      setCompletedFunctionChecks((completed) => new Set(completed).add(focus.id));
+    }
   }
 
   function advanceReview() {
@@ -2532,7 +2733,7 @@ function BoneLesson({
           <p>You got {reviewCorrectCount} out of {bones.length} questions right. You explored 15 important bones and helped build Benny’s skeleton.</p>
           <div className="lesson-results-stats">
             <div><strong>{reviewCorrectCount}/{bones.length}</strong><span>correct answers</span></div>
-            <div><strong>+{reviewXp} XP</strong><span>{reviewXp ? "added to your account" : "already collected"}</span></div>
+            <div><strong>+<AnimatedNumber value={reviewXp} initialValue={0} /> XP</strong><span>{reviewXp ? "added to your account" : "already collected"}</span></div>
           </div>
           <p className="lesson-xp-note">Spend 10 XP per extra life in Bone Bonanza—or save your XP for later.</p>
           <div className="lesson-finish-actions">
@@ -2581,7 +2782,8 @@ function BoneLesson({
         </div>
 
         {phase === "learn" ? (
-          isIntroduction ? (
+          <LessonSlideStack slideKey={slide}>
+          {isIntroduction ? (
             <section className="bone-slide-card">
               <div className="bone-illustration-panel">
                 <span className="illustration-label">YOUR BODY’S FRAMEWORK</span>
@@ -2677,13 +2879,18 @@ function BoneLesson({
                 className="primary-button quick-check-button"
                 type="button"
                 onClick={() => {
+                  if (completedFunctionChecks.has(focus.id)) {
+                    advanceAfterBoneCheck();
+                    return;
+                  }
                   setFunctionAnswer(null);
                   setFunctionPassed(false);
+                  setFunctionSubmitted(false);
                   setFeedback("");
                   setPhase("question");
                 }}
               >
-                Quick check <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
+                {completedFunctionChecks.has(focus.id) ? slide === bones.length ? "Body map challenge" : "Next bone" : "Quick check"} <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
               </button>
               <div className="bone-slide-actions">
                 <button className="back-button" type="button" disabled={slide === 0} onClick={goToPreviousSlide}>← Back</button>
@@ -2691,32 +2898,30 @@ function BoneLesson({
               </div>
             </div>
           </section>
-          )
+          )}
+          </LessonSlideStack>
         ) : phase === "question" ? (
+          <LessonSlideStack slideKey={`${slide}-quick-check`}>
           <section className="bone-function-card">
             <span className="eyebrow">QUICK CHECK</span>
             <h1>What does the {focus.name} ({bonePronunciations[focus.id]}) help do?</h1>
             <p className="muted">Choose the function that matches what you just learned.</p>
             <BennyReaction
-              expression={functionAnswer === null ? "neutral" : functionPassed ? "happy" : "sad"}
-              message={feedback || "Pick the answer you think is right!"}
+              expression={!functionSubmitted || functionAnswer === null ? "neutral" : functionPassed ? "happy" : "sad"}
+              message={!functionSubmitted ? functionAnswer === null ? "Pick an answer!" : "Tap Check answer when you’re ready!" : feedback}
             />
             <div className="function-options stacked-choices">
               {functionChoices.map((choice, index) => (
                 <ChoiceButton
                   key={choice}
                   active={functionAnswer === index}
-                  status={functionAnswer === index ? (functionPassed ? "correct" : "incorrect") : undefined}
+                  status={functionSubmitted && functionAnswer === index ? (functionPassed ? "correct" : "incorrect") : undefined}
                   onClick={() => {
                     if (functionPassed) return;
-                    const isCorrect = choice === functionQuestion.correct;
                     setFunctionAnswer(index);
-                    setFunctionPassed(isCorrect);
-                    setFeedback(
-                      isCorrect
-                        ? `That's right! ${functionQuestion.correct}`
-                        : "Not quite. Think about the job of this bone and try again!",
-                    );
+                    setFunctionSubmitted(false);
+                    setFunctionPassed(false);
+                    setFeedback("");
                   }}
                 >
                   {choice}
@@ -2731,30 +2936,35 @@ function BoneLesson({
                   setPhase("learn");
                   setFunctionAnswer(null);
                   setFunctionPassed(false);
+                  setFunctionSubmitted(false);
                   setFeedback("");
                 }}
               >
                 ← Back to {focus.name}
               </button>
+              {!functionPassed && (
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={functionAnswer === null}
+                  onClick={() => {
+                    if (functionSubmitted) {
+                      setFunctionAnswer(null);
+                      setFunctionSubmitted(false);
+                      setFeedback("");
+                      return;
+                    }
+                    submitFunctionAnswer();
+                  }}
+                >
+                  {functionSubmitted ? "Choose another answer" : "Check answer"}
+                </button>
+              )}
               {functionPassed && (
                 <button
                   className="primary-button"
                   type="button"
-                  onClick={() => {
-                    setFeedback("");
-                    setMapExpression("neutral");
-                    if (slide === bones.length) {
-                      setPhase("practice");
-                      return;
-                    }
-                    goToSlide(slide + 1);
-                    setPlaced(new Set());
-                    setSelectedBone(null);
-                    setDraggedBone(null);
-                    setFunctionAnswer(null);
-                    setFunctionPassed(false);
-                    setPhase("learn");
-                  }}
+                  onClick={advanceAfterBoneCheck}
                 >
                   {slide === bones.length ? "Body map challenge" : "Next bone"}
                   <Icon><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
@@ -2762,6 +2972,7 @@ function BoneLesson({
               )}
             </div>
           </section>
+          </LessonSlideStack>
         ) : phase === "final-quiz" ? (
           <section className="bone-function-card lesson-review-card">
             <span className="eyebrow">FINAL REVIEW</span>
@@ -3080,10 +3291,10 @@ function BoneBeatGame({
   lesson2Completed: boolean;
   lesson3Completed: boolean;
   lesson4Completed: boolean;
-  onSpendXp: (amount: number) => boolean;
+  onSpendXp: (amount: number) => Promise<boolean>;
   onCollectStar: (count: number, xpPerStar: number) => void;
   onEarnQuizXp: (amount: number) => void;
-  onRecordRun: (difficulty: GameDifficulty, stars: number) => boolean;
+  onRecordRun: (difficulty: GameDifficulty, stars: number) => Promise<boolean>;
   onExit: () => void;
 }) {
   const equippedSkin = useContext(BennySkinContext);
@@ -3471,7 +3682,9 @@ function BoneBeatGame({
         setActive(false);
         setDead(true);
         setDistance(Math.floor((now - runStart.current) / 1000));
-        setRecordSaved(recordRunRef.current(difficulty, collectedStarCount.current));
+        void recordRunRef.current(difficulty, collectedStarCount.current)
+          .then(setRecordSaved)
+          .catch(() => setRecordSaved(false));
         return;
       }
       if (now - lastHudUpdate > 200) {
@@ -3519,12 +3732,12 @@ function BoneBeatGame({
     };
   }, [active]);
 
-  function useAnotherLife() {
-    if (onSpendXp(10)) startRun();
+  async function useAnotherLife() {
+    if (await onSpendXp(10)) startRun();
   }
 
-  function startFirstLife() {
-    if (onSpendXp(10)) startRun();
+  async function startFirstLife() {
+    if (await onSpendXp(10)) startRun();
   }
 
   function setDirection(direction: string, isDown: boolean) {
@@ -3537,7 +3750,7 @@ function BoneBeatGame({
       <header className="game-topbar">
         <button className="lesson-back" type="button" onClick={onExit}>← Dashboard</button>
         <BoneLogo />
-        <div className="game-xp-pill">{xp} XP</div>
+        <div className="game-xp-pill"><AnimatedNumber value={xp} /> XP</div>
       </header>
       <section className="game-shell">
         <div className="game-heading">
@@ -3557,6 +3770,11 @@ function BoneBeatGame({
               <span className="game-overlay-icon" aria-hidden="true"><Icon><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" /></Icon></span>
               <h2>Choose your boneyard</h2>
               <p>Both runs cost 10 XP to enter. Collect stars for {difficulty === "easy" ? 1 : 5} XP each.</p>
+              {xp < 10 && !hasCompletedLessons && (
+                <p className="game-xp-guidance" role="note">
+                  Complete a lesson and its quiz to earn XP. You’ll need 10 XP to play Bone Bonanza.
+                </p>
+              )}
               <div className="difficulty-options">
                 <button className={`difficulty-option ${difficulty === "easy" ? "selected" : ""}`} type="button" aria-pressed={difficulty === "easy"} onClick={() => setDifficulty("easy")}>
                   <strong>Easy</strong><small>Bone rows · steady speed</small>
@@ -3845,7 +4063,7 @@ function RecoveryQuiz({ questions, onEarnXp, onClose }: { questions: RecoveryQue
         <>
           <span className="game-overlay-icon" aria-hidden="true"><Icon><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" /></Icon></span>
           <h2 id="recovery-quiz-title">Bone-rilliant!</h2>
-          <p>You got {correctCount} of {questions.length} right and earned {earnedXp} XP.</p>
+          <p>You got {correctCount} of {questions.length} right and earned <AnimatedNumber value={earnedXp} initialValue={0} /> XP.</p>
           <button className="game-start-button" type="button" onClick={onClose}>Back to the boneyard</button>
         </>
       ) : (
@@ -3890,16 +4108,37 @@ function RecoveryQuiz({ questions, onEarnXp, onClose }: { questions: RecoveryQue
 function DailyQuestion() {
   const dayNumber = Math.floor(Date.now() / 86_400_000);
   const question = dailyQuestions[dayNumber % dailyQuestions.length];
-  const storageKey = `bone-buddies-daily-${new Date().toISOString().slice(0, 10)}`;
-  const [selected, setSelected] = useState<number | null>(() => {
-    const savedAnswer = window.localStorage.getItem(storageKey);
-    return savedAnswer === null ? null : Number(savedAnswer);
-  });
+  const day = new Date().toISOString().slice(0, 10);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [error, setError] = useState("");
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
-  function chooseAnswer(index: number) {
-    if (selected !== null) return;
-    setSelected(index);
-    window.localStorage.setItem(storageKey, String(index));
+  useEffect(() => {
+    let active = true;
+    setSelected(null);
+    setLoadFailed(false);
+    setError("");
+    void loadDailyAnswer(day).then(({ answerIndex }) => {
+      if (active) setSelected(answerIndex);
+    }).catch((loadError: unknown) => {
+      if (active) {
+        setLoadFailed(true);
+        setError(loadError instanceof Error ? loadError.message : "The daily answer couldn’t be loaded.");
+      }
+    });
+    return () => { active = false; };
+  }, [day, loadAttempt]);
+
+  async function chooseAnswer(index: number) {
+    if (selected !== null || loadFailed) return;
+    try {
+      const { answerIndex } = await saveDailyAnswer(day, index);
+      setSelected(answerIndex);
+      setError("");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Your daily answer couldn’t be saved.");
+    }
   }
 
   const isCorrect = selected === question.answer;
@@ -3919,6 +4158,12 @@ function DailyQuestion() {
         </div>
       </div>
       <p className="daily-question">{question.question}</p>
+      {error && <p className="daily-feedback try-again" role="alert">{error}</p>}
+      {loadFailed && (
+        <button className="back-button" type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+          Retry loading today’s answer
+        </button>
+      )}
       <div className="daily-options">
         {question.options.map((option, index) => {
           const isChosen = selected === index;
@@ -3928,8 +4173,8 @@ function DailyQuestion() {
               className={`daily-option ${isChosen ? "chosen" : ""} ${isAnswer ? "correct" : ""}`}
               type="button"
               key={option}
-              disabled={selected !== null}
-              onClick={() => chooseAnswer(index)}
+              disabled={selected !== null || loadFailed}
+              onClick={() => { void chooseAnswer(index); }}
             >
               <span>{String.fromCharCode(65 + index)}</span>
               {option}
@@ -4021,7 +4266,7 @@ function ProfilePage({
   account: Account;
   profile: Profile;
   onBack: () => void;
-  onSave: (updatedAccount: Account) => { ok: boolean; message?: string };
+  onSave: (updatedAccount: Account) => { ok: boolean; message?: string } | Promise<{ ok: boolean; message?: string }>;
 }) {
   const [firstName, setFirstName] = useState(account.firstName);
   const [lastName, setLastName] = useState(account.lastName);
@@ -4038,13 +4283,13 @@ function ProfilePage({
     setDraftProfile({ ...draftProfile, [field]: next });
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const updatedProfile = normalizeProfile({
       ...draftProfile,
       name: firstName.trim() || account.firstName,
     });
-    const result = onSave({
+    const result = await onSave({
       ...account,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -4190,6 +4435,42 @@ function ProfilePage({
   );
 }
 
+function TypewriterText({ text }: { text: string }) {
+  const [visibleText, setVisibleText] = useState("");
+
+  useEffect(() => {
+    const characters = Array.from(text);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setVisibleText(text);
+      return;
+    }
+
+    let index = 0;
+    let timeoutId = 0;
+    setVisibleText("");
+
+    function typeNextCharacter() {
+      index += 1;
+      setVisibleText(characters.slice(0, index).join(""));
+      if (index >= characters.length) return;
+
+      const currentCharacter = characters[index - 1];
+      const pause = /[,.!?]/.test(currentCharacter) ? 300 : /\s/.test(currentCharacter) ? 110 : 55 + Math.random() * 45;
+      timeoutId = window.setTimeout(typeNextCharacter, pause);
+    }
+
+    timeoutId = window.setTimeout(typeNextCharacter, 180);
+    return () => window.clearTimeout(timeoutId);
+  }, [text]);
+
+  return (
+    <span className="typewriter-text" aria-label={text}>
+      <span aria-hidden="true">{visibleText}</span>
+      <span className="typewriter-caret" aria-hidden="true" />
+    </span>
+  );
+}
+
 function ShopPage({
   xp,
   ownedSkins,
@@ -4202,13 +4483,13 @@ function ShopPage({
   ownedSkins: BennySkinId[];
   equippedSkin: BennySkinId;
   onBack: () => void;
-  onBuySkin: (skinId: BennySkinId) => { ok: boolean; message: string };
-  onEquipSkin: (skinId: BennySkinId) => { ok: boolean; message: string };
+  onBuySkin: (skinId: BennySkinId) => Promise<{ ok: boolean; message: string }>;
+  onEquipSkin: (skinId: BennySkinId) => Promise<{ ok: boolean; message: string }>;
 }) {
   const [notice, setNotice] = useState("");
 
-  function handleSkin(skin: typeof bennySkins[number]) {
-    const result = ownedSkins.includes(skin.id) ? onEquipSkin(skin.id) : onBuySkin(skin.id);
+  async function handleSkin(skin: typeof bennySkins[number]) {
+    const result = await (ownedSkins.includes(skin.id) ? onEquipSkin(skin.id) : onBuySkin(skin.id));
     setNotice(result.message);
   }
 
@@ -4314,14 +4595,14 @@ function Home({
   onLesson2QuizComplete: (earnedXp: number) => void;
   onLesson3QuizComplete: (earnedXp: number) => void;
   onLesson4QuizComplete: (earnedXp: number) => void;
-  onSpendXp: (amount: number) => boolean;
+  onSpendXp: (amount: number) => Promise<boolean>;
   onCollectStar: (count: number, xpPerStar: number) => void;
   onEarnQuizXp: (amount: number) => void;
-  onRecordRun: (difficulty: GameDifficulty, stars: number) => boolean;
+  onRecordRun: (difficulty: GameDifficulty, stars: number) => Promise<boolean>;
   onOpenProfile: () => void;
   onOpenLeaderboard: () => void;
-  onBuySkin: (skinId: BennySkinId) => { ok: boolean; message: string };
-  onEquipSkin: (skinId: BennySkinId) => { ok: boolean; message: string };
+  onBuySkin: (skinId: BennySkinId) => Promise<{ ok: boolean; message: string }>;
+  onEquipSkin: (skinId: BennySkinId) => Promise<{ ok: boolean; message: string }>;
   onSignOut: () => void;
 }) {
   const [message, setMessage] = useState("Your bones are living tissue. That means they can fix themselves!");
@@ -4336,6 +4617,7 @@ function Home({
   const [showShop, setShowShop] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [resumeProgress, setResumeProgress] = useState(false);
+  const lastDisplayedXp = useRef(xp);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const hasStartedLessons = Boolean(
     lessonProgress ||
@@ -4344,6 +4626,12 @@ function Home({
     lesson3QuizCompleted ||
     lesson4QuizCompleted
   );
+
+  useEffect(() => {
+    if (!activeLesson && !showGame && !showShop) {
+      lastDisplayedXp.current = xp;
+    }
+  }, [activeLesson, showGame, showShop, xp]);
 
   useEffect(() => {
     if (!profileMenuOpen) return;
@@ -4459,7 +4747,7 @@ function Home({
       (index === 2 && lesson2FinalQuizScoringCompleted) ||
       (index === 3 && lesson3QuizCompleted)
     ) {
-      setResumeProgress(false);
+      setResumeProgress(lessonProgress?.lessonIndex === index && !completedLessons.includes(index));
       setActiveLesson(index);
       return;
     }
@@ -4475,7 +4763,7 @@ function Home({
         <div className="nav-actions">
           <div className="xp-pill" title="Experience points saved for future games">
             <Icon><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" /></Icon>
-            <strong>{xp} XP</strong>
+            <strong><AnimatedNumber value={xp} initialValue={lastDisplayedXp.current} /> XP</strong>
           </div>
           <div className="streak-pill" title="Learning streak">
             <Icon size={18} viewBox="0 0 24 24"><path d="M12 22c4.4 0 8-3.6 8-8 0-5-4-9-8-12-1 5-8 7-8 13 0 3.9 3.6 7 8 7Z" /><path d="M9 18c0-3 3-4 3-7 2 2 3 4 3 6a3 3 0 0 1-6 1Z" /></Icon>
@@ -4514,7 +4802,7 @@ function Home({
         <section className="welcome-banner">
           <div>
             <span className="eyebrow">GOOD TO SEE YOU!</span>
-            <h1>Hey {profile.name}, ready to get bone-smart?</h1>
+            <h1><TypewriterText text={`Hey ${profile.name}, ready to get bone-smart?`} /></h1>
             <p>{hasStartedLessons ? "Pick up where you left off, or explore something new." : "Ready to begin? Start your first bone-smart lesson!"}</p>
             <div className="welcome-actions">
               <button className="dark-button" type="button" onClick={() => {
@@ -4633,46 +4921,79 @@ function Home({
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("signin");
+  const [authReady, setAuthReady] = useState(false);
   const [profile, setProfile] = useState<Profile>(initialProfile);
   const [account, setAccount] = useState<Account | null>(null);
+  const [apiError, setApiError] = useState("");
+  const accountMutationQueue = useRef(Promise.resolve());
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
   const [leaderboardError, setLeaderboardError] = useState("");
-  const [streakData, setStreakData] = useState<{ count: number; lastActiveDate: string }>(() => {
-    const savedStreak = window.localStorage.getItem("bone-buddies-streak");
-    return savedStreak ? JSON.parse(savedStreak) : { count: 0, lastActiveDate: "" };
+  const [streakData, setStreakData] = useState<{ count: number; lastActiveDate: string }>({
+    count: 0,
+    lastActiveDate: "",
   });
 
-  function saveStreak(count: number, lastActiveDate: string) {
-    const nextStreak = { count, lastActiveDate };
-    setStreakData(nextStreak);
-    window.localStorage.setItem("bone-buddies-streak", JSON.stringify(nextStreak));
+  function serializeAccountMutation<T>(operation: () => Promise<T>) {
+    const task = accountMutationQueue.current.then(operation);
+    accountMutationQueue.current = task.then(() => undefined, () => undefined);
+    return task;
   }
 
-  function startFirstDay() {
-    if (streakData.count === 0) {
-      saveStreak(1, new Date().toISOString().slice(0, 10));
-    }
+  useEffect(() => {
+    let active = true;
+    void restoreSession().then((user) => {
+      if (!active || !user) return;
+      const restored = mapApiUser(user);
+      setAccount(restored);
+      setProfile(normalizeProfile(restored.profile ?? { ...initialProfile, name: restored.firstName }));
+      setStreakData({
+        count: user.streak.count,
+        lastActiveDate: user.streak.lastActiveDate ?? "",
+      });
+      setScreen(user.onboardingCompleted ? "home" : "quiz");
+    }).catch((error: unknown) => {
+      if (!active) return;
+      clearApiToken();
+      setApiError(error instanceof Error ? error.message : "Your session couldn’t be restored.");
+    }).finally(() => {
+      if (active) setAuthReady(true);
+    });
+    return () => { active = false; };
+  }, []);
+
+  function applyApiUser(user: ApiUser) {
+    const updated = mapApiUser(user);
+    setAccount(updated);
+    setStreakData({
+      count: user.streak.count,
+      lastActiveDate: user.streak.lastActiveDate ?? "",
+    });
+    setApiError("");
+    return updated;
   }
 
   function completeLesson() {
-    const today = new Date();
-    const todayKey = today.toISOString().slice(0, 10);
-    if (streakData.lastActiveDate === todayKey) return;
+    void serializeAccountMutation(() => recordStreak()).then(({ user }) => applyApiUser(user)).catch((error: unknown) => {
+      setApiError(error instanceof Error ? error.message : "Your streak couldn’t be saved.");
+    });
+  }
 
-    const yesterday = new Date(today);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    const yesterdayKey = yesterday.toISOString().slice(0, 10);
-    const nextCount = streakData.lastActiveDate === yesterdayKey ? streakData.count + 1 : 1;
-    saveStreak(nextCount, todayKey);
+  if (!authReady) {
+    return <main className="auth-shell"><p className="muted">Connecting to Bone Buddies…</p></main>;
   }
 
   if (screen === "signin") {
     return (
       <SignIn
+        initialError={apiError}
         onContinue={(signedIn, isNew) => {
           setAccount(signedIn);
           setProfile(normalizeProfile(signedIn.profile ?? { ...initialProfile, name: signedIn.firstName }));
-          startFirstDay();
+          setStreakData({
+            count: signedIn.streak?.count ?? 1,
+            lastActiveDate: signedIn.streak?.lastActiveDate ?? new Date().toISOString().slice(0, 10),
+          });
+          setApiError("");
           setScreen(isNew || !hasCompletedOnboarding(signedIn) ? "quiz" : "home");
         }}
       />
@@ -4685,15 +5006,18 @@ export default function App() {
         <Questionnaire
           profile={profile}
           setProfile={setProfile}
-          onDone={() => {
-            if (account) {
-              const normalizedProfile = normalizeProfile(profile);
-              const updatedAccount = { ...account, profile: normalizedProfile, onboardingCompleted: true };
-              saveAccount(updatedAccount, loadAccounts());
-              setAccount(updatedAccount);
-              setProfile(normalizedProfile);
+          onDone={async () => {
+            try {
+              if (account) {
+                const normalizedProfile = normalizeProfile(profile);
+                const { user } = await serializeAccountMutation(() => saveProfile(normalizedProfile, account));
+                applyApiUser(user);
+                setProfile(normalizedProfile);
+              }
+              setScreen("home");
+            } catch (error) {
+              setApiError(error instanceof Error ? error.message : "Your profile couldn’t be saved.");
             }
-            setScreen("home");
           }}
         />
       </BennySkinContext.Provider>
@@ -4706,33 +5030,16 @@ export default function App() {
         account={account}
         profile={profile}
         onBack={() => setScreen("home")}
-        onSave={(updatedAccount) => {
+        onSave={async (updatedAccount) => {
           try {
-            const accounts = loadAccounts();
-            const usernameKey = updatedAccount.username.trim().toLowerCase();
-            const emailKey = updatedAccount.email.trim().toLowerCase();
-            if (!usernameKey || !updatedAccount.firstName.trim() || !updatedAccount.lastName.trim()) {
-              return { ok: false, message: "Please complete your username and name." };
-            }
-            if (accounts[usernameKey] && accounts[usernameKey].username.toLowerCase() !== account.username.toLowerCase()) {
-              return { ok: false, message: "That username is already taken." };
-            }
-            if (Object.values(accounts).some((savedAccount) =>
-              savedAccount.username.toLowerCase() !== account.username.toLowerCase() &&
-              savedAccount.email.toLowerCase() === emailKey
-            )) {
-              return { ok: false, message: "An account with that email already exists." };
-            }
-            const oldKey = account.username.toLowerCase();
-            if (oldKey !== usernameKey) {
-              delete accounts[oldKey];
-            }
-            saveAccount(updatedAccount, accounts);
-            setAccount(updatedAccount);
-            setProfile(updatedAccount.profile ?? profile);
+            const { user } = await serializeAccountMutation(() =>
+              saveProfile(updatedAccount.profile ?? initialProfile, updatedAccount),
+            );
+            const savedAccount = applyApiUser(user);
+            setProfile(savedAccount.profile ?? profile);
             return { ok: true };
-          } catch {
-            return { ok: false, message: "Your profile couldn’t be saved. Please try again." };
+          } catch (error) {
+            return { ok: false, message: error instanceof Error ? error.message : "Your profile couldn’t be saved." };
           }
         }}
       />
@@ -4745,6 +5052,7 @@ export default function App() {
 
   return (
     <BennySkinContext.Provider value={account?.equippedSkin ?? "classic"}>
+      {apiError && <p className="api-error-banner" role="alert">{apiError}</p>}
       <Home
         profile={profile}
         streak={streakData.count}
@@ -4759,149 +5067,120 @@ export default function App() {
       onLessonComplete={completeLesson}
       onLessonProgress={(progress) => {
         if (!account) return;
-        const accounts = loadAccounts();
-        const currentAccount = accounts[account.username.toLowerCase()] ?? account;
-        const updatedAccount = { ...currentAccount, lessonProgress: progress };
-        saveAccount(updatedAccount, accounts);
-        setAccount(updatedAccount);
+        void serializeAccountMutation(() => saveLessonProgress(progress))
+          .then(({ user }) => { applyApiUser(user); })
+          .catch((error: unknown) => {
+            setApiError(error instanceof Error ? error.message : "Lesson progress couldn’t be saved.");
+          });
       }}
       onLessonQuizComplete={(earnedXp) => {
         if (!account || account.lesson1QuizCompleted) return;
-        const updatedAccount = {
-          ...account,
-          xp: (account.xp ?? 0) + earnedXp,
-          lesson1QuizCompleted: true,
-        };
-        saveAccount(updatedAccount, loadAccounts());
-        setAccount(updatedAccount);
+        void serializeAccountMutation(() => claimLessonQuiz("lesson1", earnedXp)).then(({ user }) => applyApiUser(user)).catch((error: unknown) => {
+          setApiError(error instanceof Error ? error.message : "Lesson 1 results couldn’t be saved.");
+        });
       }}
       onLesson2QuizComplete={(earnedXp) => {
         if (!account || account.lesson2FinalQuizScoringCompleted) return;
-        const updatedAccount = {
-          ...account,
-          xp: (account.xp ?? 0) + earnedXp,
-          lesson2QuizCompleted: true,
-          lesson2FinalQuizCompleted: true,
-          lesson2FinalQuizScoringCompleted: true,
-        };
-        saveAccount(updatedAccount, loadAccounts());
-        setAccount(updatedAccount);
+        void serializeAccountMutation(() => claimLessonQuiz("lesson2", earnedXp)).then(({ user }) => applyApiUser(user)).catch((error: unknown) => {
+          setApiError(error instanceof Error ? error.message : "Lesson 2 results couldn’t be saved.");
+        });
       }}
       onLesson3QuizComplete={(earnedXp) => {
         if (!account || account.lesson3QuizCompleted) return;
-        const updatedAccount = {
-          ...account,
-          xp: (account.xp ?? 0) + earnedXp,
-          lesson3QuizCompleted: true,
-        };
-        saveAccount(updatedAccount, loadAccounts());
-        setAccount(updatedAccount);
+        void serializeAccountMutation(() => claimLessonQuiz("lesson3", earnedXp)).then(({ user }) => applyApiUser(user)).catch((error: unknown) => {
+          setApiError(error instanceof Error ? error.message : "Lesson 3 results couldn’t be saved.");
+        });
       }}
       onLesson4QuizComplete={(earnedXp) => {
         if (!account || account.lesson4QuizCompleted) return;
-        const updatedAccount = {
-          ...account,
-          xp: (account.xp ?? 0) + earnedXp,
-          lesson4QuizCompleted: true,
-        };
-        saveAccount(updatedAccount, loadAccounts());
-        setAccount(updatedAccount);
+        void serializeAccountMutation(() => claimLessonQuiz("lesson4", earnedXp)).then(({ user }) => applyApiUser(user)).catch((error: unknown) => {
+          setApiError(error instanceof Error ? error.message : "Lesson 4 results couldn’t be saved.");
+        });
       }}
-      onSpendXp={(amount) => {
-        if (!account || amount <= 0 || (account.xp ?? 0) < amount) return false;
-        const updatedAccount = { ...account, xp: (account.xp ?? 0) - amount };
-        saveAccount(updatedAccount, loadAccounts());
-        setAccount(updatedAccount);
-        return true;
+      onSpendXp={async (amount) => {
+        if (!account || amount <= 0) return false;
+        try {
+          return await serializeAccountMutation(async () => {
+            const result = await apiSpendXp(amount);
+            setAccount((current) => current ? { ...current, xp: result.xp } : current);
+            setApiError("");
+            return true;
+          });
+        } catch (error) {
+          setApiError(error instanceof Error ? error.message : "XP couldn’t be spent.");
+          return false;
+        }
       }}
-      onBuySkin={(skinId) => {
+      onBuySkin={async (skinId) => {
         const skin = bennySkins.find((item) => item.id === skinId);
         if (!account || !skin) return { ok: false, message: "We couldn’t complete that purchase." };
         try {
-          const accounts = loadAccounts();
-          const currentAccount = accounts[account.username.toLowerCase()] ?? account;
-          const ownedSkins = currentAccount.ownedSkins ?? ["classic"];
-          if (ownedSkins.includes(skinId)) return { ok: false, message: "You already own this Benny skin." };
-          if ((currentAccount.xp ?? 0) < skin.price) return { ok: false, message: "You need more XP for this skin." };
-          const updatedAccount: Account = {
-            ...currentAccount,
-            xp: (currentAccount.xp ?? 0) - skin.price,
-            ownedSkins: [...ownedSkins, skinId],
-            equippedSkin: skinId,
-          };
-          saveAccount(updatedAccount, accounts);
-          setAccount(updatedAccount);
+          const user = await serializeAccountMutation(async () => {
+            const { user: purchasedUser } = await apiBuySkin(skinId);
+            return applyApiUser(purchasedUser);
+          });
           return { ok: true, message: `${skin.name} unlocked and equipped! Benny looks bone-rilliant.` };
-        } catch {
-          return { ok: false, message: "Your purchase couldn’t be saved. Please try again." };
+        } catch (error) {
+          return { ok: false, message: error instanceof Error ? error.message : "Your purchase couldn’t be saved." };
         }
       }}
-      onEquipSkin={(skinId) => {
+      onEquipSkin={async (skinId) => {
         if (!account) return { ok: false, message: "Please sign in again to change Benny’s look." };
         try {
-          const accounts = loadAccounts();
-          const currentAccount = accounts[account.username.toLowerCase()] ?? account;
-          const ownedSkins = currentAccount.ownedSkins ?? ["classic"];
-          if (!ownedSkins.includes(skinId)) return { ok: false, message: "Unlock this skin before wearing it." };
-          const updatedAccount: Account = { ...currentAccount, equippedSkin: skinId };
-          saveAccount(updatedAccount, accounts);
-          setAccount(updatedAccount);
+          await serializeAccountMutation(async () => {
+            const { user } = await apiEquipSkin(skinId);
+            applyApiUser(user);
+          });
           const skinName = bennySkins.find((skin) => skin.id === skinId)?.name ?? "Benny's new look";
           return { ok: true, message: `${skinName} equipped. Benny is ready for an adventure!` };
-        } catch {
-          return { ok: false, message: "Benny’s look couldn’t be saved. Please try again." };
+        } catch (error) {
+          return { ok: false, message: error instanceof Error ? error.message : "Benny’s look couldn’t be saved." };
         }
       }}
       onCollectStar={(count, xpPerStar) => {
         if (!account) return;
-        const updatedAccount = { ...account, xp: (account.xp ?? 0) + count * xpPerStar };
-        saveAccount(updatedAccount, loadAccounts());
-        setAccount(updatedAccount);
+        void serializeAccountMutation(() => apiEarnXp(xpPerStar === 1 ? "star" : "hard-star", count)).then(({ xp }) => {
+          setAccount((current) => current ? { ...current, xp } : current);
+        }).catch((error: unknown) => {
+          setApiError(error instanceof Error ? error.message : "Collected stars couldn’t be saved.");
+        });
       }}
       onEarnQuizXp={(earnedXp) => {
         if (!account || earnedXp <= 0) return;
-        const updatedAccount = { ...account, xp: (account.xp ?? 0) + earnedXp };
-        saveAccount(updatedAccount, loadAccounts());
-        setAccount(updatedAccount);
+        void serializeAccountMutation(() => apiEarnXp("recovery-quiz", Math.ceil(earnedXp / 5))).then(({ xp }) => {
+          setAccount((current) => current ? { ...current, xp } : current);
+        }).catch((error: unknown) => {
+          setApiError(error instanceof Error ? error.message : "Quiz XP couldn’t be saved.");
+        });
       }}
-      onRecordRun={(difficulty, stars) => {
+      onRecordRun={async (difficulty, stars) => {
         if (!account) return false;
         try {
-          const entries = loadLeaderboard();
-          const updatedEntries = [...entries, {
-            username: account.username,
-            difficulty,
-            stars,
-            achievedAt: Date.now(),
-          }];
-          const topEntries = (["easy", "hard"] as const).flatMap((level) =>
-            updatedEntries
-              .filter((entry) => entry.difficulty === level)
-              .sort((a, b) => b.stars - a.stars || a.achievedAt - b.achievedAt)
-              .slice(0, 20)
-          );
-          window.localStorage.setItem(leaderboardKey, JSON.stringify(topEntries));
-          setLeaderboardEntries(topEntries);
+          const { entries } = await recordGameRun(difficulty, stars);
+          setLeaderboardEntries(entries);
           setLeaderboardError("");
           return true;
-        } catch {
+        } catch (error) {
+          setApiError(error instanceof Error ? error.message : "Your game score couldn’t be saved.");
           return false;
         }
       }}
       onOpenProfile={() => setScreen("profile")}
       onOpenLeaderboard={() => {
-        try {
-          setLeaderboardEntries(loadLeaderboard());
+        void Promise.all([apiLoadLeaderboard("easy"), apiLoadLeaderboard("hard")]).then(([easy, hard]) => {
+          setLeaderboardEntries([...easy.entries, ...hard.entries]);
           setLeaderboardError("");
           setScreen("leaderboard");
-        } catch {
+        }).catch((error: unknown) => {
           setLeaderboardEntries([]);
-          setLeaderboardError("Leaderboard scores couldn’t be loaded from this browser. Check browser storage and try again.");
+          setLeaderboardError(error instanceof Error ? error.message : "Leaderboard scores couldn’t be loaded.");
           setScreen("leaderboard");
-        }
+        });
       }}
         onSignOut={() => {
+          clearApiToken();
           setAccount(null);
+          setProfile(initialProfile);
           setScreen("signin");
         }}
       />

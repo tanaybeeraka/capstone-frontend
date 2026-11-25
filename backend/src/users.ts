@@ -28,6 +28,11 @@ export type PublicUser = {
   lesson1QuizCompleted: boolean;
   lesson2QuizCompleted: boolean;
   lesson2FinalQuizCompleted: boolean;
+  lesson3QuizCompleted: boolean;
+  lesson4QuizCompleted: boolean;
+  lessonProgress: { lessonIndex: 0 | 1 | 2 | 3; slideIndex: number } | null;
+  ownedSkins: string[];
+  equippedSkin: string;
   streak: { count: number; lastActiveDate: string | null };
 };
 
@@ -57,6 +62,11 @@ export async function getPublicUser(db: Db, userId: string): Promise<PublicUser>
     lesson1QuizCompleted: lessons.includes("lesson1"),
     lesson2QuizCompleted: lessons.includes("lesson2"),
     lesson2FinalQuizCompleted: lessons.includes("lesson2"),
+    lesson3QuizCompleted: lessons.includes("lesson3"),
+    lesson4QuizCompleted: lessons.includes("lesson4"),
+    lessonProgress: row.lesson_progress,
+    ownedSkins: row.owned_skins,
+    equippedSkin: row.equipped_skin,
     streak: { count: row.streak_count, lastActiveDate: row.streak_last_active },
   };
 }

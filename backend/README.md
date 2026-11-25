@@ -42,6 +42,7 @@ Authorization: Bearer <token>
 ```
 
 Tokens last 7 days. A request with a missing or expired token gets a `401`; send the user back to sign-in when that happens.
+The frontend defaults to `https://capstone-backend-zb1m.onrender.com`; set `VITE_API_BASE_URL` at build time to use another API instance.
 
 ## Endpoints
 
@@ -50,17 +51,21 @@ Every error response looks like `{ "message": "..." }`, with text that can be sh
 | Method & path | Body | Returns | Replaces in the frontend |
 |---|---|---|---|
 | `GET /health` | – | `{ ok: true }` | – |
-| `POST /api/auth/signup` | `{ firstName, lastName, username, email, password }` | `201 { token, user }`, or `409` if the username or email is taken | `saveAccount` in `SignIn.submit` (create mode) |
-| `POST /api/auth/login` | `{ username, password }` | `{ token, user }`, or `401` | password check in `SignIn.submit`; also starts the streak, like `startFirstDay()` |
-| `GET /api/me` | – | `{ user }` | restoring the session on page load |
-| `PUT /api/me/profile` | `{ profile }` | `{ user }` with `onboardingCompleted: true` | questionnaire `onDone` |
-| `POST /api/me/lessons/lesson1/quiz` | `{ earnedXp }` (0–90) | `{ user }` | `onLessonQuizComplete` |
-| `POST /api/me/lessons/lesson2/quiz` | `{ earnedXp }` (0–140) | `{ user }` | `onLesson2QuizComplete` |
-| `POST /api/me/streak` | – | `{ user }` | `completeLesson()` |
-| `POST /api/me/xp/earn` | `{ source: "star" \| "recovery-quiz", count? }` | `{ xp }` | `onCollectStar` (+1 each), `onEarnQuizXp` (+5 each) |
-| `POST /api/me/xp/spend` | `{ amount }` | `{ xp }`, or `409` if there isn't enough XP | `onSpendXp` |
-| `GET /api/me/daily/:YYYY-MM-DD` | – | `{ answerIndex }` (or `null`) | `bone-buddies-daily-*` localStorage key |
-| `PUT /api/me/daily/:YYYY-MM-DD` | `{ answerIndex }` | `{ answerIndex }` (the first answer sticks) | same |
+| `POST /api/auth/signup` | `{ firstName, lastName, username, email, password }` | `201 { token, user }`, or `409` if username/email is taken | account creation |
+| `POST /api/auth/login` | `{ username, password }` | `{ token, user }`, or `401` | sign-in; initializes the streak on first sign-in |
+| `GET /api/me` | – | `{ user }` | session restoration |
+| `PUT /api/me/profile` | `{ profile, firstName?, lastName?, username?, email? }` | `{ user }` with `onboardingCompleted: true` | onboarding and profile editing |
+| `PUT /api/me/lesson-progress` | `{ progress: { lessonIndex, slideIndex } }` | `{ user }` | current lesson and slide resume point |
+| `POST /api/me/lessons/:lessonId/quiz` | `{ earnedXp }` | `{ user }` | one-time quiz completion for `lesson1`–`lesson4` |
+| `POST /api/me/streak` | – | `{ user }` | lesson completion streak |
+| `POST /api/me/xp/earn` | `{ source: "star" \| "hard-star" \| "recovery-quiz", count? }` | `{ xp }` | game stars and recovery quiz rewards |
+| `POST /api/me/xp/spend` | `{ amount }` | `{ xp }`, or `409` if there isn't enough XP | purchases and game lives |
+| `POST /api/me/skins/purchase` | `{ skinId }` | `{ user }`, or `409` if already owned / not enough XP | Benny skin purchase |
+| `PUT /api/me/skins/equip` | `{ skinId }` | `{ user }` | Benny skin selection |
+| `POST /api/me/game-runs` | `{ difficulty: "easy" \| "hard", stars }` | `{ entries }` | Bone Bonanza score submission |
+| `GET /api/me/leaderboard?difficulty=easy\|hard` | – | `{ entries }` | Bone Bonanza leaderboard |
+| `GET /api/me/daily/:YYYY-MM-DD` | – | `{ answerIndex }` (or `null`) | daily answer |
+| `PUT /api/me/daily/:YYYY-MM-DD` | `{ answerIndex }` | `{ answerIndex }` (first answer sticks) | daily answer |
 
 The `user` object uses the same field names as the frontend's `Account` type, plus `id`, `onboardingCompleted` and `streak: { count, lastActiveDate }`:
 
@@ -74,6 +79,11 @@ The `user` object uses the same field names as the frontend's `Account` type, pl
   "lesson1QuizCompleted": true,
   "lesson2QuizCompleted": false,
   "lesson2FinalQuizCompleted": false,
+  "lesson3QuizCompleted": false,
+  "lesson4QuizCompleted": false,
+  "lessonProgress": { "lessonIndex": 1, "slideIndex": 2 },
+  "ownedSkins": ["classic", "cosmic"],
+  "equippedSkin": "cosmic",
   "streak": { "count": 1, "lastActiveDate": "2026-11-14" }
 }
 ```
@@ -82,9 +92,10 @@ The `user` object uses the same field names as the frontend's `Account` type, pl
 
 The frontend reports what happened, and the server decides what it's worth:
 
-- Each lesson quiz awards XP **once**. Later claims return the user unchanged. A claim above the quiz's maximum is rejected; update `lessonQuizMaxXp` in [src/routes/me.ts](src/routes/me.ts) if you add questions.
-- Star and recovery-quiz rewards are fixed on the server (`xpRewards`), so the client can't choose the amount.
+- Each lesson quiz awards XP **once**. Current caps are Lesson 1 (14 questions: 140 XP), Lesson 2 (9 questions: 90 XP), Lesson 3 (3 questions: 30 XP), and Lesson 4 (4 questions: 40 XP). Update `lessonQuizMaxXp` in [src/routes/me.ts](src/routes/me.ts) when question counts or reward rules change.
+- Star and recovery-quiz rewards are fixed on the server (`xpRewards`): easy stars award 1 XP, hard stars 5 XP, and correct recovery-quiz answers 5 XP each.
 - Spending XP checks the balance and subtracts it in a single SQL statement, so double clicks can't push XP below zero.
+- Skin prices and ownership are validated server-side; game runs are stored and leaderboards show each user's best score for the selected difficulty.
 - Streak dates use UTC, the same as the frontend's `toISOString().slice(0, 10)`.
 - Passwords are hashed with bcrypt. Sign-up and login are limited to 20 attempts per IP every 15 minutes.
 
